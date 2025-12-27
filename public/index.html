@@ -8,150 +8,72 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000a0f; --glass: rgba(0, 20, 30, 0.9); }
+        :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000a0f; }
+        body { background: var(--bg); color: var(--cyan); font-family: 'Orbitron', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        * { box-sizing: border-box; }
-        body { 
-            background: var(--bg); color: var(--cyan); 
-            font-family: 'Orbitron', sans-serif; margin: 0; 
-            display: flex; height: 100vh; overflow: hidden; 
-        }
-
-        /* Sidebar Styles */
-        #sidebar { 
-            width: 360px; background: var(--glass); 
-            border-right: 1px solid var(--cyan); padding: 25px; 
-            display: flex; flex-direction: column; z-index: 100; 
-            backdrop-filter: blur(15px); transition: all 0.3s ease;
-        }
+        #main-layout { flex: 1; display: flex; overflow: hidden; position: relative; }
+        #sidebar { width: 340px; background: rgba(0, 15, 25, 0.9); border-right: 1px solid var(--cyan); padding: 20px; display: flex; flex-direction: column; z-index: 10; backdrop-filter: blur(10px); }
         
-        /* Display Area */
-        #display { 
-            flex: 1; position: relative; display: flex; 
-            background: radial-gradient(circle, #001f2b 0%, #000 100%); 
-            overflow: hidden;
-        }
+        #display-area { flex: 1; position: relative; background: #000; }
+        video, canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; }
         
-        canvas, video { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+        .mode-btn { border: 1px solid rgba(0, 242, 255, 0.2); padding: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.3s; background: rgba(0, 242, 255, 0.05); }
+        .active-mode { border-color: var(--cyan); background: rgba(0, 242, 255, 0.15); box-shadow: 0 0 10px var(--cyan); }
+
+        .result-hud { position: absolute; bottom: 80px; left: 20px; right: 20px; background: rgba(0,10,20,0.85); border: 1px solid var(--cyan); padding: 15px; border-radius: 4px; z-index: 50; }
         
-        .scan-line { 
-            position: absolute; width: 100%; height: 2px; 
-            background: var(--cyan); top: 0; box-shadow: 0 0 15px var(--cyan); 
-            animation: scan 4s linear infinite; z-index: 5; opacity: 0.3; 
-        }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .btn-trigger { width: 100%; padding: 18px; background: transparent; border: 1px solid var(--green); color: var(--green); font-weight: bold; font-family: 'Orbitron'; cursor: pointer; margin-top: auto; letter-spacing: 2px; }
+        .btn-trigger.active { border-color: var(--red); color: var(--red); box-shadow: 0 0 15px var(--red); }
 
-        /* UI Components */
-        .mode-container { margin-bottom: 10px; }
-        .mode-card { 
-            border: 1px solid rgba(0, 242, 255, 0.2); padding: 15px; 
-            margin-bottom: 12px; cursor: pointer; transition: 0.3s; 
-            background: rgba(255,255,255,0.02); text-align: left;
-        }
-        .mode-card:hover, .active-mode { 
-            border-color: var(--cyan); background: rgba(0, 242, 255, 0.1); 
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); 
-        }
-        
-        .result-hud { 
-            position: absolute; bottom: 80px; left: 20px; right: 20px; 
-            background: rgba(0,10,20,0.85); border: 1px solid var(--cyan); 
-            padding: 15px; border-radius: 4px; z-index: 60;
-        }
+        footer { background: #000; padding: 12px; text-align: center; border-top: 1px solid #111; font-size: 0.7rem; color: var(--cyan); z-index: 100; }
 
-        .btn-trigger { 
-            width: 100%; padding: 15px; background: transparent; 
-            border: 1px solid var(--green); color: var(--green); 
-            font-family: 'Orbitron'; font-weight: bold; cursor: pointer; 
-            text-transform: uppercase; letter-spacing: 2px;
-        }
-
-        /* Footer */
-        footer {
-            position: absolute; bottom: 0; width: 100%; 
-            padding: 15px; background: rgba(0,0,0,0.8);
-            border-top: 1px solid rgba(0, 242, 255, 0.2);
-            text-align: center; font-size: 0.7rem; color: var(--cyan);
-            letter-spacing: 1px; z-index: 110; pointer-events: none;
-        }
-
-        /* Responsive Breakpoints */
-        @media (max-width: 900px) {
-            body { flex-direction: column; }
-            #sidebar { 
-                width: 100%; height: auto; border-right: none; 
-                border-bottom: 1px solid var(--cyan); padding: 15px; 
-            }
-            .mode-card p { display: none; }
-            .mode-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-            .mode-card { margin-bottom: 0; padding: 10px; font-size: 0.6rem; text-align: center; }
-            #display { flex: 1; }
+        @media (max-width: 850px) {
+            #main-layout { flex-direction: column; }
+            #sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--cyan); }
+            .mode-container { display: flex; gap: 8px; overflow-x: auto; }
+            .mode-btn { min-width: 110px; font-size: 0.6rem; margin: 0; }
             .result-hud { bottom: 60px; padding: 10px; }
-            footer { font-size: 0.6rem; padding: 10px; }
         }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <div style="text-align:center; margin-bottom:20px;">
-        <h1 style="margin:0; font-size: 1.4rem; letter-spacing:3px; text-shadow: 0 0 10px var(--cyan);">MICROMIND</h1>
-        <small style="color:var(--green); font-size: 0.6rem;">NEURAL INTERFACE V4.0</small>
+<div id="main-layout">
+    <div id="sidebar">
+        <h2 style="text-align: center; font-size: 1.2rem; margin-bottom: 20px; letter-spacing: 2px;">MICROMIND V4</h2>
+        
+        <div class="mode-container">
+            <div id="mouse-mode" class="mode-btn" onclick="setMode('mouse')"><b>USB_MOUSE</b></div>
+            <div id="camera-mode" class="mode-btn active-mode" onclick="setMode('camera')"><b>OPTIC_SCAN</b></div>
+            <div id="heartbeat-mode" class="mode-btn" onclick="setMode('heartbeat')"><b>BIO_PULSE</b></div>
+        </div>
+
+        <div style="height: 80px; margin: 15px 0;"><canvas id="liveChart"></canvas></div>
+        
+        <button id="trigger-btn" class="btn-trigger" onclick="runTrigger()">START TRIGGER</button>
     </div>
 
-    <div class="mode-container">
-        <div id="mouse-btn" class="mode-card" onclick="selectMode('mouse')">
-            <b>USB_MOUSE</b>
-            <p style="font-size:0.6rem; opacity:0.6; margin:5px 0 0 0;">ট্রেমর অ্যানালাইসিস</p>
-        </div>
-        <div id="camera-btn" class="mode-card active-mode" onclick="selectMode('camera')">
-            <b>OPTIC_CAM</b>
-            <p style="font-size:0.6rem; opacity:0.6; margin:5px 0 0 0;">ফেসিয়াল রিডিং</p>
-        </div>
-        <div id="heart-btn" class="mode-card" onclick="selectMode('heartbeat')">
-            <b>BIO_PULSE</b>
-            <p style="font-size:0.6rem; opacity:0.6; margin:5px 0 0 0;">স্কিন কন্টাক্ট পালস</p>
-        </div>
-    </div>
-
-    <div style="flex: 1; min-height: 60px; max-height: 100px;">
-        <canvas id="miniChart"></canvas>
-    </div>
-    
-    <button class="btn-trigger" onclick="triggerIncentive()">START TRIGGER</button>
-</div>
-
-<div id="display">
-    <div class="scan-line"></div>
-    <video id="input_video" style="display:none" playsinline></video>
-    <canvas id="face-canvas"></canvas>
-
-    <div class="result-hud">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex: 1;">
-                <span style="font-size:0.5rem; opacity:0.6;">VERDICT:</span><br>
-                <b id="verdict" style="font-size:0.9rem; color:var(--green)">WAITING...</b>
+    <div id="display-area">
+        <video id="input_video" style="display:none"></video>
+        <canvas id="face-canvas"></canvas>
+        
+        <div class="result-hud">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div><small style="font-size: 0.5rem; opacity: 0.7;">VERDICT:</small><br><b id="verdict" style="color:var(--green); font-size: 1rem;">SYSTEM READY</b></div>
+                <div style="text-align:right;"><small style="font-size: 0.5rem; opacity: 0.7;">STRESS SCORE:</small><br><b id="score" style="font-size: 1.3rem;">00</b>%</div>
             </div>
-            <div style="text-align:right; flex: 1;">
-                <span style="font-size:0.5rem; opacity:0.6;">STRESS INDEX:</span><br>
-                <b id="score" style="font-size:1.2rem;">00</b>%
-            </div>
-        </div>
-        <div id="mind-state" style="font-size:0.65rem; margin-top:8px; border-top:1px solid rgba(0,242,255,0.1); padding-top:8px; color:#fff;">
-            সিস্টেম রেডি... সিগন্যাল স্ক্যান করুন।
+            <div id="mind-state" style="font-size: 0.7rem; margin-top: 10px; border-top: 1px solid rgba(0,242,255,0.2); padding-top: 8px;">অপেক্ষা করা হচ্ছে...</div>
         </div>
     </div>
 </div>
 
-<footer>
-    MicroMind © Humayun Shariar Himu
-</footer>
+<footer>MicroMind © Humayun Shariar Himu</footer>
 
 <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let currentMode = 'camera', isTriggered = false, mouseJitter = 0, baselineJitter = 1.0;
 
-    function playBeep(f=800, d=0.1) {
+    function beep(f=800, d=0.1) {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         let o=audioCtx.createOscillator(), g=audioCtx.createGain();
         o.type='sine'; o.frequency.value=f; g.gain.value=0.03;
@@ -159,65 +81,93 @@
         o.start(); g.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+d); o.stop(audioCtx.currentTime+d);
     }
 
-    function selectMode(m) {
-        playBeep(1200, 0.05);
-        currentMode = m;
-        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active-mode'));
-        document.getElementById(m + '-btn').classList.add('active-mode');
+    function setMode(m) {
+        currentMode = m; beep(1200, 0.05);
+        document.querySelectorAll('.mode-btn').forEach(el => el.classList.remove('active-mode'));
+        document.getElementById(m + '-mode').classList.add('active-mode');
     }
 
-    document.onmousemove = (e) => { mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2); };
+    // মাউস ট্রেমর সেন্সিং (USB Mouse/OTG)
+    document.onmousemove = (e) => {
+        mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2);
+    };
 
-    function triggerIncentive() {
-        isTriggered = true; playBeep(400, 0.4);
-        setTimeout(() => isTriggered = false, 4000);
+    // Trigger বাটন কাজ করার ফাংশন
+    function runTrigger() {
+        isTriggered = true;
+        beep(400, 0.4);
+        const btn = document.getElementById('trigger-btn');
+        btn.classList.add('active');
+        btn.innerText = "SENSING DEPTH...";
+        
+        // ৪ সেকেন্ড পর অটো বন্ধ হবে (ইন্টারোগেশন পিরিয়ড)
+        setTimeout(() => {
+            isTriggered = false;
+            btn.classList.remove('active');
+            btn.innerText = "START TRIGGER";
+        }, 4000);
     }
 
-    const chart = new Chart(document.getElementById('miniChart'), {
+    const chart = new Chart(document.getElementById('liveChart'), {
         type: 'line',
         data: { labels: Array(20).fill(''), datasets: [{ data: [], borderColor: '#00f2ff', borderWidth: 1, pointRadius: 0, tension: 0.4 }] },
         options: { maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
     });
 
     const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.7 });
+    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.6 });
 
     faceMesh.onResults(results => {
         const cvs = document.getElementById('face-canvas'), ctx = cvs.getContext('2d');
         ctx.clearRect(0,0,cvs.width,cvs.height);
-        if (results.multiFaceLandmarks) {
+
+        let dataToSend = {
+            baseline_jitter: baselineJitter,
+            current_jitter: mouseJitter,
+            brow_dist: 0.5, eye_ratio: 0.5, mouth_tension: 0.1,
+            pulse_val: (currentMode === 'heartbeat') ? mouseJitter : Math.random() * 2,
+            mode: currentMode,
+            is_triggered: isTriggered
+        };
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
             const l = results.multiFaceLandmarks[0];
+            
+            // ড্রইং পয়েন্ট
             ctx.fillStyle = currentMode === 'heartbeat' ? "#ff0055" : "#00f2ff";
             for(let i=0; i<l.length; i+=15) ctx.fillRect(l[i].x*cvs.width, l[i].y*cvs.height, 2, 2);
 
-            const bd = Math.abs(l[10].y - l[151].y);
-            const er = Math.abs(l[159].y - l[145].y);
-            const mt = Math.abs(l[13].y - l[14].y);
-            let pv = (currentMode === 'heartbeat' || currentMode === 'mouse') ? mouseJitter : Math.random()*2;
-            
-            fetch('/api/analyze', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    baseline_jitter: baselineJitter, current_jitter: mouseJitter,
-                    brow_dist: bd, eye_ratio: er, mouth_tension: mt,
-                    pulse_val: pv, mode: currentMode, is_triggered: isTriggered
-                })
-            }).then(r => r.json()).then(d => {
-                document.getElementById('verdict').innerText = d.verdict;
-                document.getElementById('score').innerText = Math.round(d.score);
-                document.getElementById('mind-state').innerText = d.mind_state;
-                chart.data.datasets[0].data.push(d.score);
-                if(chart.data.datasets[0].data.length > 20) chart.data.datasets[0].data.shift();
-                chart.update('none');
-                baselineJitter = (baselineJitter * 0.95) + (mouseJitter * 0.05);
-            }).catch(() => {});
+            // ব্যাকএন্ডের জন্য ফেস ভ্যালু ক্যালকুলেশন
+            dataToSend.brow_dist = Math.abs(l[10].y - l[151].y);
+            dataToSend.eye_ratio = Math.abs(l[159].y - l[145].y);
+            dataToSend.mouth_tension = Math.abs(l[13].y - l[14].y);
         }
+
+        // রিয়েল-টাইম ব্যাকএন্ড কল
+        fetch('/api/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(dataToSend)
+        })
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('verdict').innerText = d.verdict;
+            document.getElementById('score').innerText = Math.round(d.score);
+            document.getElementById('mind-state').innerText = d.mind_state;
+            
+            // গ্রাফ আপডেট
+            chart.data.datasets[0].data.push(d.score);
+            if(chart.data.datasets[0].data.length > 20) chart.data.datasets[0].data.shift();
+            chart.update('none');
+            baselineJitter = (baselineJitter * 0.9) + (mouseJitter * 0.1);
+        }).catch(err => console.error("Backend offline"));
     });
 
-    navigator.mediaDevices.getUserMedia({video: { facingMode: "user" }}).then(s => {
-        const v = document.getElementById('input_video'); v.srcObject = s; v.play();
-        const run = async () => { await faceMesh.send({image: v}); requestAnimationFrame(run); }; run();
+    navigator.mediaDevices.getUserMedia({video: true}).then(s => {
+        const v = document.getElementById('input_video');
+        v.srcObject = s; v.play();
+        const run = async () => { await faceMesh.send({image: v}); requestAnimationFrame(run); };
+        run();
     });
 </script>
 </body>
