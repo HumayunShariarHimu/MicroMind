@@ -2,220 +2,211 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MicroMind | Bio-Neural Interface</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MicroMind | Bio-Neural OS</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
-        :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000a0f; }
-        body { background: var(--bg); color: var(--cyan); font-family: 'Orbitron', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--cyan); font-family: 'Orbitron', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* UI Header */
+        #header { height: 35px; border-bottom: 1px solid var(--cyan); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.6rem; letter-spacing: 1px; background: rgba(0,20,30,0.8); }
+
+        /* Main Workspace */
+        #workspace { flex: 1; position: relative; display: flex; flex-direction: row; }
         
-        #main-container { flex: 1; display: flex; overflow: hidden; position: relative; }
-        #sidebar { width: 340px; background: rgba(0, 15, 25, 0.95); border-right: 1px solid var(--cyan); padding: 20px; display: flex; flex-direction: column; z-index: 100; backdrop-filter: blur(10px); }
-        
-        #display { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
-        
-        /* ক্যানভাসের উপরে ক্যামেরা ফিড দেখা যাবে */
+        #sidebar { width: 280px; border-right: 1px solid var(--cyan); background: rgba(0,10,15,0.9); padding: 15px; display: flex; flex-direction: column; z-index: 10; }
+
+        #camera-container { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        video#input_video { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
         canvas#face-canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        video#input_video { display: none; /* ভিডিও ট্যাগটি হাইড থাকবে কিন্তু মিডিয়াপাইপের ইনপুট হিসেবে কাজ করবে */ }
 
-        .mode-card { border: 1px solid rgba(0, 242, 255, 0.2); padding: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.02); }
-        .active-mode { border-color: var(--cyan); background: rgba(0, 242, 255, 0.15); box-shadow: 0 0 10px var(--cyan); }
+        /* Controls */
+        .mode-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+        .btn { border: 1px solid var(--cyan); background: transparent; color: var(--cyan); padding: 10px; cursor: pointer; font-family: 'Orbitron'; font-size: 0.65rem; transition: 0.3s; }
+        .btn.active { background: rgba(0, 242, 255, 0.2); border-color: var(--green); color: var(--green); box-shadow: 0 0 10px var(--green); }
+        .trigger-btn { border: 1px solid var(--red); color: var(--red); margin-top: auto; font-weight: bold; padding: 15px; }
+        .trigger-btn.active { background: var(--red); color: white; box-shadow: 0 0 20px var(--red); }
 
-        .result-hud { position: absolute; bottom: 80px; left: 20px; right: 20px; background: rgba(0,10,20,0.85); border: 1px solid var(--cyan); padding: 15px; border-radius: 4px; z-index: 50; }
-        .btn-trigger { width: 100%; padding: 18px; background: transparent; border: 2px solid var(--green); color: var(--green); font-weight: bold; font-family: 'Orbitron'; cursor: pointer; margin-top: auto; letter-spacing: 2px; }
-        .btn-trigger:active { background: var(--green); color: #000; }
-        .triggering-active { border-color: var(--red) !important; color: var(--red) !important; box-shadow: 0 0 20px var(--red); }
-
-        footer { background: #000; padding: 10px; text-align: center; border-top: 1px solid rgba(0, 242, 255, 0.1); font-size: 0.7rem; color: var(--cyan); z-index: 101; }
-
-        @media (max-width: 900px) {
-            body { flex-direction: column; }
-            #sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--cyan); padding: 15px; }
-            .mode-card p { display: none; }
-            .mode-container { display: flex; gap: 8px; overflow-x: auto; }
-            .mode-card { min-width: 110px; margin: 0; padding: 10px; font-size: 0.6rem; text-align: center; }
+        /* Analysis HUD */
+        #hud { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            background: rgba(0, 5, 10, 0.9); border-top: 1px solid var(--cyan); 
+            padding: 10px; display: grid; grid-template-columns: 120px 1fr; gap: 15px;
+            z-index: 20; backdrop-filter: blur(5px);
         }
+        .score-box { text-align: center; border-right: 1px solid rgba(0,242,255,0.3); }
+        .score-val { font-size: 2rem; font-weight: bold; color: var(--red); }
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-family: 'Rajdhani'; font-size: 0.8rem; }
+        .data-item { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,242,255,0.1); padding: 2px 0; }
+        .data-item span { color: rgba(0,242,255,0.5); font-size: 0.7rem; }
+
+        /* Mobile Layout */
+        @media (max-width: 850px) {
+            #workspace { flex-direction: column; }
+            #sidebar { 
+                width: 100%; border-right: none; border-bottom: 1px solid var(--cyan); 
+                height: auto; padding: 8px; order: 2;
+            }
+            .mode-group { flex-direction: row; margin-bottom: 5px; overflow-x: auto; }
+            .btn { flex: 1; min-width: 100px; padding: 8px; font-size: 0.55rem; }
+            .trigger-btn { margin-top: 5px; padding: 8px; }
+            #hud { order: 3; position: relative; grid-template-columns: 1fr; border-top: 2px solid var(--cyan); }
+            .score-box { border-right: none; border-bottom: 1px solid rgba(0,242,255,0.3); padding-bottom: 5px; }
+        }
+
+        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--cyan); top: 0; box-shadow: 0 0 15px var(--cyan); opacity: 0.3; animation: scan 3s linear infinite; pointer-events: none; z-index: 5; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
     </style>
 </head>
 <body>
 
-<div id="main-container">
+<div id="header">
+    <div>CORE_OS_v2.0</div>
+    <div id="status">STATUS: CALIBRATING...</div>
+    <div id="clock">00:00:00</div>
+</div>
+
+<div id="workspace">
     <div id="sidebar">
-        <div style="text-align:center; margin-bottom:20px;">
-            <h1 style="margin:0; font-size: 1.4rem; letter-spacing:3px;">MICROMIND</h1>
-            <small style="color:var(--green)">NEURAL CORE V4.0</small>
+        <div class="mode-group">
+            <button id="mouse-btn" class="btn" onclick="setMode('mouse')">MOUSE_OTG</button>
+            <button id="camera-btn" class="btn active" onclick="setMode('camera')">OPTIC_SCAN</button>
+            <button id="heart-btn" class="btn" onclick="setMode('heartbeat')">BIO_PULSE</button>
         </div>
-
-        <div class="mode-container">
-            <div id="mouse-btn" class="mode-card" onclick="selectMode('mouse')"><b>USB MOUSE</b></div>
-            <div id="camera-btn" class="mode-card active-mode" onclick="selectMode('camera')"><b>OPTIC CAM</b></div>
-            <div id="heart-btn" class="mode-card" onclick="selectMode('heartbeat')"><b>BIO PULSE</b></div>
-        </div>
-
-        <div style="height: 80px; margin: 20px 0;"><canvas id="miniChart"></canvas></div>
-        
-        <button id="trigger-btn" class="btn-trigger" onclick="startTrigger()">START TRIGGERING</button>
+        <button id="trigger-btn" class="btn trigger-btn" onclick="fireTrigger()">START_INTERROGATION</button>
     </div>
 
-    <div id="display">
-        <video id="input_video" playsinline></video>
+    <div id="camera-container">
+        <div class="scan-line"></div>
+        <video id="input_video" playsinline muted autoplay></video>
         <canvas id="face-canvas"></canvas>
+    </div>
 
-        <div class="result-hud">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <span style="font-size:0.6rem; opacity:0.6;">PSYCHOLOGICAL VERDICT:</span><br>
-                    <b id="verdict" style="font-size:1.1rem; color:var(--green)">INITIALIZING...</b>
-                </div>
-                <div style="text-align:right;">
-                    <span style="font-size:0.6rem; opacity:0.6;">STRESS SCORE:</span><br>
-                    <b id="score" style="font-size:1.4rem;">00</b>%
-                </div>
-            </div>
-            <div id="mind-state" style="font-size:0.7rem; margin-top:10px; border-top:1px solid rgba(0,242,255,0.1); padding-top:8px; color:#fff;">
-                ক্যামেরা এবং সেন্সর কানেক্ট করুন।
-            </div>
+    <div id="hud">
+        <div class="score-box">
+            <small>STRESS_LEVEL</small>
+            <div class="score-val"><span id="score-text">00</span>%</div>
+            <div id="verdict-text" style="font-size: 0.5rem; color: var(--green);">SYSTEM_READY</div>
+        </div>
+        <div class="data-grid">
+            <div class="data-item"><span>MIND_STATE:</span><b id="state-val">-</b></div>
+            <div class="data-item"><span>TREMOR_IDX:</span><b id="jitter-val">0.00</b></div>
+            <div class="data-item"><span>OCULAR_RAT:</span><b id="eye-val">0.00</b></div>
+            <div class="data-item"><span>NEURAL_TEN:</span><b id="brow-val">0.00</b></div>
         </div>
     </div>
 </div>
-
-<footer>MicroMind © Humayun Shariar Himu</footer>
 
 <script>
     const videoElement = document.getElementById('input_video');
     const canvasElement = document.getElementById('face-canvas');
     const canvasCtx = canvasElement.getContext('2d');
-    const triggerBtn = document.getElementById('trigger-btn');
+    
+    let currentMode = 'camera', isTriggered = false, mouseJitter = 0;
 
-    let currentMode = 'camera', isTriggered = false, mouseJitter = 0, baselineJitter = 1.0;
+    // Clock
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
 
-    // ১. স্টার্ট ট্রিগারিং ফাংশন
-    function startTrigger() {
-        console.log("Trigger Clicked!");
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(m + '-btn').classList.add('active');
+    }
+
+    function fireTrigger() {
         isTriggered = true;
-        triggerBtn.classList.add('triggering-active');
-        triggerBtn.innerText = "SENSING DEPTH...";
-        
+        document.getElementById('trigger-btn').classList.add('active');
         setTimeout(() => {
             isTriggered = false;
-            triggerBtn.classList.remove('triggering-active');
-            triggerBtn.innerText = "START TRIGGERING";
-        }, 4000);
+            document.getElementById('trigger-btn').classList.remove('active');
+        }, 3000);
     }
 
-    // ২. মোড সিলেকশন
-    function selectMode(m) {
-        currentMode = m;
-        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active-mode'));
-        document.getElementById(m + '-btn').classList.add('active-mode');
-    }
-
-    // মাউস ট্রেমর সেন্সিং
-    document.onmousemove = (e) => { mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2); };
-
-    // ৩. গ্রাফ সেটআপ
-    const chart = new Chart(document.getElementById('miniChart'), {
-        type: 'line',
-        data: { labels: Array(20).fill(''), datasets: [{ data: [], borderColor: '#00f2ff', borderWidth: 1, pointRadius: 0, tension: 0.4 }] },
-        options: { maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
+    document.addEventListener('mousemove', (e) => {
+        mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2);
     });
 
-    // ৪. ফেস মেশ সেটআপ
     const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-
-    faceMesh.onResults(onResults);
-
-    function onResults(results) {
-        canvasElement.width = videoElement.videoWidth; // ক্যানভাসের সাইজ ভিডিওর সাথে সিঙ্ক করা হয়েছে
+    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
+    
+    faceMesh.onResults((results) => {
+        canvasElement.width = videoElement.videoWidth;
         canvasElement.height = videoElement.videoHeight;
-        
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         
-        // ক্যানভাসের উপর ভিডিও ফ্রেম আঁকা
-        // transform: scaleX(-1) CSS দিয়ে করা হয়েছে, তাই এখানে আর অতিরিক্ত স্কেলিং দরকার নেই
+        // মিরর এফেক্ট ঠিক রাখতে ইমেজ ড্রয়িং
+        canvasCtx.translate(canvasElement.width, 0);
+        canvasCtx.scale(-1, 1);
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-        
-        // ফেস ল্যান্ডমার্ক ড্র করা
-        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            const landmarks = results.multiFaceLandmarks[0];
-            
-            canvasCtx.fillStyle = currentMode === 'heartbeat' ? "#ff0055" : "#00f2ff";
-            for (const point of landmarks) {
-                // এখানে আর মিরর ট্রান্সফরমেশন দরকার নেই কারণ CSS দিয়ে ভিডিওতেই মিরর করা হয়েছে
-                let x = point.x * canvasElement.width;
-                let y = point.y * canvasElement.height;
-                canvasCtx.fillRect(x, y, 1.5, 1.5); // ছোট ডট
-            }
+        canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
 
-            // ব্যাকএন্ড ভ্যালু ক্যালকুলেশন
-            dataToSend.brow_dist = Math.abs(landmarks[10].y - landmarks[151].y);
-            dataToSend.eye_ratio = Math.abs(landmarks[159].y - landmarks[145].y);
-            dataToSend.mouth_tension = Math.abs(landmarks[13].y - landmarks[14].y);
-        }
-
-        canvasCtx.restore();
-
-        let dataToSend = {
-            baseline_jitter: baselineJitter,
-            current_jitter: mouseJitter,
-            brow_dist: 0.5, eye_ratio: 0.5, mouth_tension: 0.1, // ডিফল্ট মান
-            pulse_val: (currentMode === 'heartbeat' || currentMode === 'mouse') ? mouseJitter : Math.random(),
+        let packet = {
             mode: currentMode,
-            is_triggered: isTriggered
+            jitter: mouseJitter,
+            triggered: isTriggered,
+            brow: 0, eye: 0
         };
 
-        // ৫. ব্যাকএন্ডে ডেটা পাঠানো (Vercel-এ API URL ঠিক থাকতে হবে)
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const l = results.multiFaceLandmarks[0];
+            canvasCtx.fillStyle = "#00ff41";
+            l.forEach((pt, i) => {
+                if(i % 20 === 0) canvasCtx.fillRect(pt.x * canvasElement.width, pt.y * canvasElement.height, 2, 2);
+            });
+            packet.brow = Math.abs(l[10].y - l[151].y);
+            packet.eye = Math.abs(l[159].y - l[145].y);
+        }
+
+        // Backend Sync
         fetch('/api/analyze', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(dataToSend)
+            body: JSON.stringify(packet)
         })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('verdict').innerText = data.verdict;
-            document.getElementById('score').innerText = Math.round(data.score);
-            document.getElementById('mind-state').innerText = data.mind_state;
-            
-            chart.data.datasets[0].data.push(data.score);
-            if(chart.data.datasets[0].data.length > 20) chart.data.datasets[0].data.shift();
-            chart.update('none');
-            baselineJitter = (baselineJitter * 0.9) + (mouseJitter * 0.1);
-        }).catch(e => {
-            // console.error("Backend error:", e);
-            document.getElementById('mind-state').innerText = "ব্যাকএন্ড সংযোগে সমস্যা। সার্ভার চালু আছে কি না দেখুন।";
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('score-text').innerText = Math.round(d.score || 0);
+            document.getElementById('verdict-text').innerText = d.verdict || "STABLE";
+            document.getElementById('state-val').innerText = d.mind_state || "UNKNOWN";
+            document.getElementById('jitter-val').innerText = mouseJitter.toFixed(2);
+            document.getElementById('eye-val').innerText = packet.eye.toFixed(3);
+            document.getElementById('brow-val').innerText = packet.brow.toFixed(3);
+            document.getElementById('status').innerHTML = "STATUS: <span style='color:var(--green)'>SYNC_OK</span>";
+        }).catch(() => {
+            document.getElementById('status').innerHTML = "STATUS: <span style='color:var(--red)'>BACKEND_ERROR</span>";
         });
-    }
+        canvasCtx.restore();
+    });
 
-    // ৬. ক্যামেরা পারমিশন ও স্টার্ট
-    async function startCamera() {
+    async function init() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } 
+            });
             videoElement.srcObject = stream;
-            videoElement.onloadedmetadata = () => { // ভিডিও লোড হলে ক্যানভাসের সাইজ সেট হবে
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
+            videoElement.onloadedmetadata = () => {
                 videoElement.play();
-                requestAnimationFrame(predict);
+                document.getElementById('status').innerText = "STATUS: SCANNING...";
+                requestAnimationFrame(runTask);
             };
-            
-            async function predict() {
-                if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-                    await faceMesh.send({image: videoElement});
-                }
-                requestAnimationFrame(predict);
-            }
-        } catch (err) {
-            alert("ক্যামেরা এক্সেস পাওয়া যায়নি! দয়া করে ব্রাউজারে ক্যামেরা পারমিশন চেক করুন এবং পেজ রিফ্রেশ করুন।");
-            console.error("Camera access error:", err);
-            document.getElementById('mind-state').innerText = "ক্যামেরা এক্সেস পাওয়া যায়নি।";
+        } catch (e) {
+            alert("ক্যামেরা এক্সেস দিন এবং পেজ রিফ্রেশ করুন।");
         }
     }
 
-    window.onload = startCamera;
+    async function runTask() {
+        if (videoElement.readyState === 4) {
+            await faceMesh.send({image: videoElement});
+        }
+        requestAnimationFrame(runTask);
+    }
+
+    window.onload = init;
 </script>
 </body>
 </html>
