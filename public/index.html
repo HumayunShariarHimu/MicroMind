@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio-Neuro Scan AI | Mind Reader</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --neon: #00ff41; --danger: #ff3e3e; --bg: #050505; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { border-bottom: 1px solid var(--neon); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        #app-body { display: flex; flex: 1; }
+        #sidebar { width: 320px; border-right: 1px solid var(--neon); padding: 15px; overflow-y: auto; background: rgba(0,0,0,0.9); }
+        #display-area { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
+        canvas#face-canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
+        .card { border: 1px solid var(--neon); padding: 12px; margin-bottom: 15px; background: rgba(0,255,65,0.03); }
+        .pulse-card { border-color: var(--danger); color: var(--danger); }
+        .btn { background: var(--neon); color: black; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn:disabled { background: #333; color: #888; }
+        #pulseChart { height: 120px !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>SYSTEM: NEURO-SCAN ONLINE</div>
+    <div id="clock">LIVE SCANNER</div>
+</header>
+
+<div id="app-body">
+    <div id="sidebar">
+        <div class="card pulse-card">
+            PULSE WAVEFORM (PPG):
+            <canvas id="pulseChart"></canvas>
+        </div>
+
+        <div class="card">
+            <button id="ask-btn" class="btn" onclick="triggerAsk()">প্রশ্ন করুন (TRIGGER)</button>
+            <div id="timer" style="display:none; color:var(--danger); text-align:center; margin-top:5px;">বিশ্লেষণ চলছে: <span id="sec">3</span>s</div>
+        </div>
+
+        <div class="card">
+            <div>ফলাফল: <span id="verdict" style="font-weight:bold;">INITIALIZING...</span></div>
+            <div>স্কোর: <span id="score">0</span>%</div>
+            <div style="height:4px; background:#222; margin-top:10px;"><div id="bar" style="height:100%; background:var(--neon); width:0%"></div></div>
+        </div>
+
+        <div class="card" style="font-size: 0.8rem">
+            <p>USB MOUSE: <span id="mouse-stat">ACTIVE</span></p>
+            <p>EYE TRACKING: <span id="eye-stat">LOCKED</span></p>
+        </div>
+    </div>
+
+    <div id="display-area">
+        <video id="input_video" style="display:none" playsinline></video>
+        <canvas id="face-canvas"></canvas>
+    </div>
+</div>
+
+<script>
+const video = document.getElementById('input_video');
+const canvas = document.getElementById('face-canvas');
+const ctx = canvas.getContext('2d');
+let mouseJitter = 0, baselineJitter = 1.0, isTriggered = false;
+
+// Heartbeat Chart
+const pulseCtx = document.getElementById('pulseChart').getContext('2d');
+const pulseChart = new Chart(pulseCtx, {
+    type: 'line',
+    data: { labels: Array(30).fill(''), datasets: [{ data: [], borderColor: '#ff3e3e', borderWidth: 2, pointRadius: 0, tension: 0.4 }] },
+    options: { scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
+});
+
+// USB Mouse Sensing
+document.onmousemove = (e) => {
+    mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2);
+};
+
+function triggerAsk() {
+    isTriggered = true;
+    let s = 3;
+    document.getElementById('ask-btn').disabled = true;
+    document.getElementById('timer').style.display = 'block';
+    let countdown = setInterval(() => {
+        s--; document.getElementById('sec').innerText = s;
+        if(s<=0) { clearInterval(countdown); isTriggered = false; document.getElementById('ask-btn').disabled = false; document.getElementById('timer').style.display = 'none'; }
+    }, 1000);
+}
+
+const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
+
+faceMesh.onResults(results => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (results.multiFaceLandmarks) {
+        for (const l of results.multiFaceLandmarks) {
+            // Draw Dots
+            for(let i=0; i<l.length; i+=10) {
+                ctx.fillStyle = "#00ff41";
+                ctx.fillRect(l[i].x * canvas.width, l[i].y * canvas.height, 2, 2);
+            }
+            const bd = Math.abs(l[10].y - l[151].y);
+            const er = Math.abs(l[159].y - l[145].y);
+            
+            let pulseSim = mouseJitter > 0 ? mouseJitter : Math.random() * 2;
+            updateChart(pulseSim);
+            sendData(mouseJitter, bd, er, pulseSim);
+        }
+    }
+});
+
+function updateChart(v) {
+    pulseChart.data.datasets[0].data.push(v);
+    if(pulseChart.data.datasets[0].data.length > 30) pulseChart.data.datasets[0].data.shift();
+    pulseChart.update('none');
+}
+
+async function sendData(mj, bd, er, ps) {
+    try {
+        const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ baseline_jitter: baselineJitter, current_jitter: mj, brow_dist: bd, eye_ratio: er, pulse_val: ps, is_triggered: isTriggered })
+        });
+        const d = await res.json();
+        document.getElementById('verdict').innerText = d.verdict;
+        document.getElementById('score').innerText = d.score;
+        document.getElementById('bar').style.width = d.score + "%";
+        baselineJitter = (baselineJitter * 0.9) + (mj * 0.1);
+    } catch (e) {}
+}
+
+navigator.mediaDevices.getUserMedia({video: true}).then(s => {
+    video.srcObject = s; video.play();
+    const run = async () => { await faceMesh.send({image: video}); requestAnimationFrame(run); };
+    run();
+});
+</script>
+</body>
+</html>
