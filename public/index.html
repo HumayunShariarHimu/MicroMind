@@ -2,140 +2,224 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bio-Neuro Scan AI | Mind Reader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MicroMind | Bio-Neural Interface</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00ff41; --danger: #ff3e3e; --bg: #050505; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { border-bottom: 1px solid var(--neon); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-        #app-body { display: flex; flex: 1; }
-        #sidebar { width: 320px; border-right: 1px solid var(--neon); padding: 15px; overflow-y: auto; background: rgba(0,0,0,0.9); }
-        #display-area { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
-        canvas#face-canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
-        .card { border: 1px solid var(--neon); padding: 12px; margin-bottom: 15px; background: rgba(0,255,65,0.03); }
-        .pulse-card { border-color: var(--danger); color: var(--danger); }
-        .btn { background: var(--neon); color: black; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; font-size: 1rem; }
-        .btn:disabled { background: #333; color: #888; }
-        #pulseChart { height: 120px !important; }
+        :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000a0f; --glass: rgba(0, 20, 30, 0.9); }
+        
+        * { box-sizing: border-box; }
+        body { 
+            background: var(--bg); color: var(--cyan); 
+            font-family: 'Orbitron', sans-serif; margin: 0; 
+            display: flex; height: 100vh; overflow: hidden; 
+        }
+
+        /* Sidebar Styles */
+        #sidebar { 
+            width: 360px; background: var(--glass); 
+            border-right: 1px solid var(--cyan); padding: 25px; 
+            display: flex; flex-direction: column; z-index: 100; 
+            backdrop-filter: blur(15px); transition: all 0.3s ease;
+        }
+        
+        /* Display Area */
+        #display { 
+            flex: 1; position: relative; display: flex; 
+            background: radial-gradient(circle, #001f2b 0%, #000 100%); 
+            overflow: hidden;
+        }
+        
+        canvas, video { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+        
+        .scan-line { 
+            position: absolute; width: 100%; height: 2px; 
+            background: var(--cyan); top: 0; box-shadow: 0 0 15px var(--cyan); 
+            animation: scan 4s linear infinite; z-index: 5; opacity: 0.3; 
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* UI Components */
+        .mode-container { margin-bottom: 10px; }
+        .mode-card { 
+            border: 1px solid rgba(0, 242, 255, 0.2); padding: 15px; 
+            margin-bottom: 12px; cursor: pointer; transition: 0.3s; 
+            background: rgba(255,255,255,0.02); text-align: left;
+        }
+        .mode-card:hover, .active-mode { 
+            border-color: var(--cyan); background: rgba(0, 242, 255, 0.1); 
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); 
+        }
+        
+        .result-hud { 
+            position: absolute; bottom: 80px; left: 20px; right: 20px; 
+            background: rgba(0,10,20,0.85); border: 1px solid var(--cyan); 
+            padding: 15px; border-radius: 4px; z-index: 60;
+        }
+
+        .btn-trigger { 
+            width: 100%; padding: 15px; background: transparent; 
+            border: 1px solid var(--green); color: var(--green); 
+            font-family: 'Orbitron'; font-weight: bold; cursor: pointer; 
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* Footer */
+        footer {
+            position: absolute; bottom: 0; width: 100%; 
+            padding: 15px; background: rgba(0,0,0,0.8);
+            border-top: 1px solid rgba(0, 242, 255, 0.2);
+            text-align: center; font-size: 0.7rem; color: var(--cyan);
+            letter-spacing: 1px; z-index: 110; pointer-events: none;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            #sidebar { 
+                width: 100%; height: auto; border-right: none; 
+                border-bottom: 1px solid var(--cyan); padding: 15px; 
+            }
+            .mode-card p { display: none; }
+            .mode-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .mode-card { margin-bottom: 0; padding: 10px; font-size: 0.6rem; text-align: center; }
+            #display { flex: 1; }
+            .result-hud { bottom: 60px; padding: 10px; }
+            footer { font-size: 0.6rem; padding: 10px; }
+        }
     </style>
 </head>
 <body>
 
-<header>
-    <div>SYSTEM: NEURO-SCAN ONLINE</div>
-    <div id="clock">LIVE SCANNER</div>
-</header>
+<div id="sidebar">
+    <div style="text-align:center; margin-bottom:20px;">
+        <h1 style="margin:0; font-size: 1.4rem; letter-spacing:3px; text-shadow: 0 0 10px var(--cyan);">MICROMIND</h1>
+        <small style="color:var(--green); font-size: 0.6rem;">NEURAL INTERFACE V4.0</small>
+    </div>
 
-<div id="app-body">
-    <div id="sidebar">
-        <div class="card pulse-card">
-            PULSE WAVEFORM (PPG):
-            <canvas id="pulseChart"></canvas>
+    <div class="mode-container">
+        <div id="mouse-btn" class="mode-card" onclick="selectMode('mouse')">
+            <b>USB_MOUSE</b>
+            <p style="font-size:0.6rem; opacity:0.6; margin:5px 0 0 0;">ট্রেমর অ্যানালাইসিস</p>
         </div>
-
-        <div class="card">
-            <button id="ask-btn" class="btn" onclick="triggerAsk()">প্রশ্ন করুন (TRIGGER)</button>
-            <div id="timer" style="display:none; color:var(--danger); text-align:center; margin-top:5px;">বিশ্লেষণ চলছে: <span id="sec">3</span>s</div>
+        <div id="camera-btn" class="mode-card active-mode" onclick="selectMode('camera')">
+            <b>OPTIC_CAM</b>
+            <p style="font-size:0.6rem; opacity:0.6; margin:5px 0 0 0;">ফেসিয়াল রিডিং</p>
         </div>
-
-        <div class="card">
-            <div>ফলাফল: <span id="verdict" style="font-weight:bold;">INITIALIZING...</span></div>
-            <div>স্কোর: <span id="score">0</span>%</div>
-            <div style="height:4px; background:#222; margin-top:10px;"><div id="bar" style="height:100%; background:var(--neon); width:0%"></div></div>
-        </div>
-
-        <div class="card" style="font-size: 0.8rem">
-            <p>USB MOUSE: <span id="mouse-stat">ACTIVE</span></p>
-            <p>EYE TRACKING: <span id="eye-stat">LOCKED</span></p>
+        <div id="heart-btn" class="mode-card" onclick="selectMode('heartbeat')">
+            <b>BIO_PULSE</b>
+            <p style="font-size:0.6rem; opacity:0.6; margin:5px 0 0 0;">স্কিন কন্টাক্ট পালস</p>
         </div>
     </div>
 
-    <div id="display-area">
-        <video id="input_video" style="display:none" playsinline></video>
-        <canvas id="face-canvas"></canvas>
+    <div style="flex: 1; min-height: 60px; max-height: 100px;">
+        <canvas id="miniChart"></canvas>
+    </div>
+    
+    <button class="btn-trigger" onclick="triggerIncentive()">START TRIGGER</button>
+</div>
+
+<div id="display">
+    <div class="scan-line"></div>
+    <video id="input_video" style="display:none" playsinline></video>
+    <canvas id="face-canvas"></canvas>
+
+    <div class="result-hud">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex: 1;">
+                <span style="font-size:0.5rem; opacity:0.6;">VERDICT:</span><br>
+                <b id="verdict" style="font-size:0.9rem; color:var(--green)">WAITING...</b>
+            </div>
+            <div style="text-align:right; flex: 1;">
+                <span style="font-size:0.5rem; opacity:0.6;">STRESS INDEX:</span><br>
+                <b id="score" style="font-size:1.2rem;">00</b>%
+            </div>
+        </div>
+        <div id="mind-state" style="font-size:0.65rem; margin-top:8px; border-top:1px solid rgba(0,242,255,0.1); padding-top:8px; color:#fff;">
+            সিস্টেম রেডি... সিগন্যাল স্ক্যান করুন।
+        </div>
     </div>
 </div>
 
+<footer>
+    MicroMind © Humayun Shariar Himu
+</footer>
+
 <script>
-const video = document.getElementById('input_video');
-const canvas = document.getElementById('face-canvas');
-const ctx = canvas.getContext('2d');
-let mouseJitter = 0, baselineJitter = 1.0, isTriggered = false;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let currentMode = 'camera', isTriggered = false, mouseJitter = 0, baselineJitter = 1.0;
 
-// Heartbeat Chart
-const pulseCtx = document.getElementById('pulseChart').getContext('2d');
-const pulseChart = new Chart(pulseCtx, {
-    type: 'line',
-    data: { labels: Array(30).fill(''), datasets: [{ data: [], borderColor: '#ff3e3e', borderWidth: 2, pointRadius: 0, tension: 0.4 }] },
-    options: { scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
-});
+    function playBeep(f=800, d=0.1) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        let o=audioCtx.createOscillator(), g=audioCtx.createGain();
+        o.type='sine'; o.frequency.value=f; g.gain.value=0.03;
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); g.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+d); o.stop(audioCtx.currentTime+d);
+    }
 
-// USB Mouse Sensing
-document.onmousemove = (e) => {
-    mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2);
-};
+    function selectMode(m) {
+        playBeep(1200, 0.05);
+        currentMode = m;
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active-mode'));
+        document.getElementById(m + '-btn').classList.add('active-mode');
+    }
 
-function triggerAsk() {
-    isTriggered = true;
-    let s = 3;
-    document.getElementById('ask-btn').disabled = true;
-    document.getElementById('timer').style.display = 'block';
-    let countdown = setInterval(() => {
-        s--; document.getElementById('sec').innerText = s;
-        if(s<=0) { clearInterval(countdown); isTriggered = false; document.getElementById('ask-btn').disabled = false; document.getElementById('timer').style.display = 'none'; }
-    }, 1000);
-}
+    document.onmousemove = (e) => { mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2); };
 
-const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
+    function triggerIncentive() {
+        isTriggered = true; playBeep(400, 0.4);
+        setTimeout(() => isTriggered = false, 4000);
+    }
 
-faceMesh.onResults(results => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (results.multiFaceLandmarks) {
-        for (const l of results.multiFaceLandmarks) {
-            // Draw Dots
-            for(let i=0; i<l.length; i+=10) {
-                ctx.fillStyle = "#00ff41";
-                ctx.fillRect(l[i].x * canvas.width, l[i].y * canvas.height, 2, 2);
-            }
+    const chart = new Chart(document.getElementById('miniChart'), {
+        type: 'line',
+        data: { labels: Array(20).fill(''), datasets: [{ data: [], borderColor: '#00f2ff', borderWidth: 1, pointRadius: 0, tension: 0.4 }] },
+        options: { maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
+    });
+
+    const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.7 });
+
+    faceMesh.onResults(results => {
+        const cvs = document.getElementById('face-canvas'), ctx = cvs.getContext('2d');
+        ctx.clearRect(0,0,cvs.width,cvs.height);
+        if (results.multiFaceLandmarks) {
+            const l = results.multiFaceLandmarks[0];
+            ctx.fillStyle = currentMode === 'heartbeat' ? "#ff0055" : "#00f2ff";
+            for(let i=0; i<l.length; i+=15) ctx.fillRect(l[i].x*cvs.width, l[i].y*cvs.height, 2, 2);
+
             const bd = Math.abs(l[10].y - l[151].y);
             const er = Math.abs(l[159].y - l[145].y);
+            const mt = Math.abs(l[13].y - l[14].y);
+            let pv = (currentMode === 'heartbeat' || currentMode === 'mouse') ? mouseJitter : Math.random()*2;
             
-            let pulseSim = mouseJitter > 0 ? mouseJitter : Math.random() * 2;
-            updateChart(pulseSim);
-            sendData(mouseJitter, bd, er, pulseSim);
+            fetch('/api/analyze', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    baseline_jitter: baselineJitter, current_jitter: mouseJitter,
+                    brow_dist: bd, eye_ratio: er, mouth_tension: mt,
+                    pulse_val: pv, mode: currentMode, is_triggered: isTriggered
+                })
+            }).then(r => r.json()).then(d => {
+                document.getElementById('verdict').innerText = d.verdict;
+                document.getElementById('score').innerText = Math.round(d.score);
+                document.getElementById('mind-state').innerText = d.mind_state;
+                chart.data.datasets[0].data.push(d.score);
+                if(chart.data.datasets[0].data.length > 20) chart.data.datasets[0].data.shift();
+                chart.update('none');
+                baselineJitter = (baselineJitter * 0.95) + (mouseJitter * 0.05);
+            }).catch(() => {});
         }
-    }
-});
+    });
 
-function updateChart(v) {
-    pulseChart.data.datasets[0].data.push(v);
-    if(pulseChart.data.datasets[0].data.length > 30) pulseChart.data.datasets[0].data.shift();
-    pulseChart.update('none');
-}
-
-async function sendData(mj, bd, er, ps) {
-    try {
-        const res = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ baseline_jitter: baselineJitter, current_jitter: mj, brow_dist: bd, eye_ratio: er, pulse_val: ps, is_triggered: isTriggered })
-        });
-        const d = await res.json();
-        document.getElementById('verdict').innerText = d.verdict;
-        document.getElementById('score').innerText = d.score;
-        document.getElementById('bar').style.width = d.score + "%";
-        baselineJitter = (baselineJitter * 0.9) + (mj * 0.1);
-    } catch (e) {}
-}
-
-navigator.mediaDevices.getUserMedia({video: true}).then(s => {
-    video.srcObject = s; video.play();
-    const run = async () => { await faceMesh.send({image: video}); requestAnimationFrame(run); };
-    run();
-});
+    navigator.mediaDevices.getUserMedia({video: { facingMode: "user" }}).then(s => {
+        const v = document.getElementById('input_video'); v.srcObject = s; v.play();
+        const run = async () => { await faceMesh.send({image: v}); requestAnimationFrame(run); }; run();
+    });
 </script>
 </body>
 </html>
+
