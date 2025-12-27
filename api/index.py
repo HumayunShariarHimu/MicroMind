@@ -12,19 +12,17 @@ class BioAnalysisData(BaseModel):
     pulse_val: float
     is_triggered: bool
 
+@app.get("/")
+def read_root():
+    return {"status": "Mind Reader API is running"}
+
 @app.post("/api/analyze")
 async def analyze(data: BioAnalysisData):
-    # স্কোরিং লজিক
     stress_score = 0
-    
-    # ১. হার্টবিট/পালস ইনটেনসিটি বিশ্লেষণ (৩০%)
     pulse_stress = min(data.pulse_val * 8, 30)
-    
-    # ২. মাইক্রো-ট্রেমর বা পেশির কাঁপুনি (৩৫%)
     jitter_diff = abs(data.current_jitter - data.baseline_jitter)
     vibration_score = min(jitter_diff * 15, 35)
     
-    # ৩. কপাল ও চোখের স্থিরতা (৩৫%)
     facial_score = 0
     if data.brow_dist < 0.18: facial_score += 17.5
     if data.eye_ratio < 0.12: facial_score += 17.5
@@ -42,3 +40,4 @@ async def analyze(data: BioAnalysisData):
         "verdict": verdict,
         "pulse_status": "অস্থির" if pulse_stress > 20 else "স্বাভাবিক"
     }
+
