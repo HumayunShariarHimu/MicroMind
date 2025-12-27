@@ -3,80 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MicroMind | Bio-Neural OS</title>
+    <title>MicroMind</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; outline: none; }
         body { background: var(--bg); color: var(--cyan); font-family: 'Orbitron', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* UI Header */
-        #header { height: 35px; border-bottom: 1px solid var(--cyan); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.6rem; letter-spacing: 1px; background: rgba(0,20,30,0.8); }
-
-        /* Main Workspace */
+        /* UI Elements */
+        #header { height: 40px; border-bottom: 1px solid var(--cyan); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.7rem; background: rgba(0,20,30,0.9); }
         #workspace { flex: 1; position: relative; display: flex; flex-direction: row; }
-        
         #sidebar { width: 280px; border-right: 1px solid var(--cyan); background: rgba(0,10,15,0.9); padding: 15px; display: flex; flex-direction: column; z-index: 10; }
 
-        #camera-container { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #camera-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video#input_video { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
         canvas#face-canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        /* Controls */
-        .mode-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
-        .btn { border: 1px solid var(--cyan); background: transparent; color: var(--cyan); padding: 10px; cursor: pointer; font-family: 'Orbitron'; font-size: 0.65rem; transition: 0.3s; }
-        .btn.active { background: rgba(0, 242, 255, 0.2); border-color: var(--green); color: var(--green); box-shadow: 0 0 10px var(--green); }
-        .trigger-btn { border: 1px solid var(--red); color: var(--red); margin-top: auto; font-weight: bold; padding: 15px; }
+        .btn { border: 1px solid var(--cyan); background: transparent; color: var(--cyan); padding: 12px; cursor: pointer; font-family: 'Orbitron'; font-size: 0.65rem; margin-bottom: 10px; transition: 0.3s; width: 100%; }
+        .btn.active { background: rgba(0, 242, 255, 0.2); border-color: var(--green); color: var(--green); }
+        .trigger-btn { border: 1px solid var(--red); color: var(--red); font-weight: bold; margin-top: auto; }
         .trigger-btn.active { background: var(--red); color: white; box-shadow: 0 0 20px var(--red); }
 
-        /* Analysis HUD */
-        #hud { 
-            position: absolute; bottom: 0; left: 0; right: 0; 
-            background: rgba(0, 5, 10, 0.9); border-top: 1px solid var(--cyan); 
-            padding: 10px; display: grid; grid-template-columns: 120px 1fr; gap: 15px;
-            z-index: 20; backdrop-filter: blur(5px);
-        }
+        /* HUD & Data Display */
+        #hud { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 5, 10, 0.95); border-top: 1px solid var(--cyan); padding: 15px; display: grid; grid-template-columns: 140px 1fr; gap: 20px; z-index: 20; }
         .score-box { text-align: center; border-right: 1px solid rgba(0,242,255,0.3); }
-        .score-val { font-size: 2rem; font-weight: bold; color: var(--red); }
-        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-family: 'Rajdhani'; font-size: 0.8rem; }
-        .data-item { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,242,255,0.1); padding: 2px 0; }
-        .data-item span { color: rgba(0,242,255,0.5); font-size: 0.7rem; }
+        .score-val { font-size: 2.5rem; font-weight: bold; color: var(--red); text-shadow: 0 0 10px var(--red); }
+        
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: 'Rajdhani'; font-size: 0.9rem; }
+        .data-item { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,242,255,0.1); padding: 3px 0; }
+        .data-item span { color: rgba(0,242,255,0.5); font-size: 0.7rem; text-transform: uppercase; }
 
-        /* Mobile Layout */
+        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--cyan); top: 0; box-shadow: 0 0 15px var(--cyan); opacity: 0.3; animation: scan 4s linear infinite; pointer-events: none; z-index: 5; }
+        
+        /* Footer Style */
+        #footer { 
+            height: 25px; 
+            border-top: 1px solid rgba(0, 242, 255, 0.3); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 0.55rem; 
+            background: rgba(0, 10, 15, 0.9); 
+            letter-spacing: 2px; 
+            color: rgba(0, 242, 255, 0.6);
+        }
+
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
         @media (max-width: 850px) {
             #workspace { flex-direction: column; }
-            #sidebar { 
-                width: 100%; border-right: none; border-bottom: 1px solid var(--cyan); 
-                height: auto; padding: 8px; order: 2;
-            }
-            .mode-group { flex-direction: row; margin-bottom: 5px; overflow-x: auto; }
-            .btn { flex: 1; min-width: 100px; padding: 8px; font-size: 0.55rem; }
-            .trigger-btn { margin-top: 5px; padding: 8px; }
-            #hud { order: 3; position: relative; grid-template-columns: 1fr; border-top: 2px solid var(--cyan); }
-            .score-box { border-right: none; border-bottom: 1px solid rgba(0,242,255,0.3); padding-bottom: 5px; }
+            #sidebar { width: 100%; height: auto; order: 2; border-right: none; border-top: 1px solid var(--cyan); }
+            #hud { order: 3; position: relative; grid-template-columns: 1fr; }
         }
-
-        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--cyan); top: 0; box-shadow: 0 0 15px var(--cyan); opacity: 0.3; animation: scan 3s linear infinite; pointer-events: none; z-index: 5; }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <div>CORE_OS_v2.0</div>
-    <div id="status">STATUS: CALIBRATING...</div>
+    <div>MicroMind</div>
+    <div id="status">STATUS: BOOTING...</div>
     <div id="clock">00:00:00</div>
 </div>
 
 <div id="workspace">
     <div id="sidebar">
-        <div class="mode-group">
-            <button id="mouse-btn" class="btn" onclick="setMode('mouse')">MOUSE_OTG</button>
-            <button id="camera-btn" class="btn active" onclick="setMode('camera')">OPTIC_SCAN</button>
-            <button id="heart-btn" class="btn" onclick="setMode('heartbeat')">BIO_PULSE</button>
-        </div>
+        <button id="cam-btn" class="btn active" onclick="setMode('camera')">OPTIC_FACS_SCAN</button>
+        <button id="mou-btn" class="btn" onclick="setMode('mouse')">MOUSE_JITTER_SYNC</button>
+        <button id="bio-btn" class="btn" onclick="setMode('heartbeat')">BIO_THERMAL_PULSE</button>
         <button id="trigger-btn" class="btn trigger-btn" onclick="fireTrigger()">START_INTERROGATION</button>
     </div>
 
@@ -88,124 +82,135 @@
 
     <div id="hud">
         <div class="score-box">
-            <small>STRESS_LEVEL</small>
+            <small>STRESS_IDX</small>
             <div class="score-val"><span id="score-text">00</span>%</div>
-            <div id="verdict-text" style="font-size: 0.5rem; color: var(--green);">SYSTEM_READY</div>
+            <div id="verdict-text" style="font-size: 0.6rem; color: var(--green);">CALIBRATING...</div>
         </div>
         <div class="data-grid">
             <div class="data-item"><span>MIND_STATE:</span><b id="state-val">-</b></div>
-            <div class="data-item"><span>TREMOR_IDX:</span><b id="jitter-val">0.00</b></div>
+            <div class="data-item"><span>JITTER_TRM:</span><b id="jitter-val">0.00</b></div>
             <div class="data-item"><span>OCULAR_RAT:</span><b id="eye-val">0.00</b></div>
+            <div class="data-item"><span>THERMAL_SKIN:</span><b id="pulse-val">0.00</b></div>
             <div class="data-item"><span>NEURAL_TEN:</span><b id="brow-val">0.00</b></div>
+            <div class="data-item"><span>MOUTH_STRESS:</span><b id="mouth-val">0.00</b></div>
         </div>
     </div>
 </div>
 
-<script>
-    const videoElement = document.getElementById('input_video');
-    const canvasElement = document.getElementById('face-canvas');
-    const canvasCtx = canvasElement.getContext('2d');
-    
-    let currentMode = 'camera', isTriggered = false, mouseJitter = 0;
+<div id="footer">
+    Humayun Shariar Himu 
+</div>
 
-    // Clock
+<script>
+    const video = document.getElementById('input_video');
+    const canvas = document.getElementById('face-canvas');
+    const ctx = canvas.getContext('2d');
+    let currentMode = 'camera', isTriggered = false, mouseJitter = 0, baselineJitter = 1.2;
+
     setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
 
     function setMode(m) {
         currentMode = m;
         document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(m + '-btn').classList.add('active');
+        document.getElementById(m.substring(0,3) + '-btn').classList.add('active');
     }
 
     function fireTrigger() {
         isTriggered = true;
         document.getElementById('trigger-btn').classList.add('active');
-        setTimeout(() => {
-            isTriggered = false;
-            document.getElementById('trigger-btn').classList.remove('active');
-        }, 3000);
+        setTimeout(() => { isTriggered = false; document.getElementById('trigger-btn').classList.remove('active'); }, 5000);
     }
 
     document.addEventListener('mousemove', (e) => {
         mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2);
     });
 
+    // --- JS Frontend Internal Logic ---
+    function runInternalLogic(p) {
+        let score = (Math.abs(p.current_jitter - p.baseline_jitter) * 5);
+        if (p.brow_dist < 0.1) score += 20;
+        if (p.eye_ratio < 0.05) score += 25;
+        if (p.is_triggered) score *= 1.3;
+        score = Math.min(score, 100);
+
+        let verdict = score > 70 ? "DECEPTION" : (score > 40 ? "ANXIETY" : "STABLE");
+        let state = score > 70 ? "Defensive" : "Coherent";
+        return { score, verdict, mind_state: state };
+    }
+
     const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
     faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
-    
+
     faceMesh.onResults((results) => {
-        canvasElement.width = videoElement.videoWidth;
-        canvasElement.height = videoElement.videoHeight;
-        canvasCtx.save();
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        
-        // মিরর এফেক্ট ঠিক রাখতে ইমেজ ড্রয়িং
-        canvasCtx.translate(canvasElement.width, 0);
-        canvasCtx.scale(-1, 1);
-        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-        canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
         let packet = {
-            mode: currentMode,
-            jitter: mouseJitter,
-            triggered: isTriggered,
-            brow: 0, eye: 0
+            baseline_jitter: baselineJitter,
+            current_jitter: mouseJitter,
+            brow_dist: 0.5, eye_ratio: 0.5, mouth_tension: 0.0,
+            pulse_val: (currentMode === 'heartbeat') ? (mouseJitter + 60) : 72,
+            mode: currentMode, is_triggered: isTriggered
         };
 
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
             const l = results.multiFaceLandmarks[0];
-            canvasCtx.fillStyle = "#00ff41";
-            l.forEach((pt, i) => {
-                if(i % 20 === 0) canvasCtx.fillRect(pt.x * canvasElement.width, pt.y * canvasElement.height, 2, 2);
-            });
-            packet.brow = Math.abs(l[10].y - l[151].y);
-            packet.eye = Math.abs(l[159].y - l[145].y);
+            packet.brow_dist = Math.abs(l[10].y - l[151].y);
+            packet.eye_ratio = Math.abs(l[159].y - l[145].y);
+            packet.mouth_tension = Math.abs(l[13].y - l[14].y);
+            
+            ctx.fillStyle = "#00ff41";
+            [10, 151, 159, 13].forEach(i => ctx.fillRect(l[i].x * canvas.width, l[i].y * canvas.height, 3, 3));
         }
 
-        // Backend Sync
+        // Display Real-time Sensor Data
+        document.getElementById('jitter-val').innerText = mouseJitter.toFixed(2);
+        document.getElementById('eye-val').innerText = packet.eye_ratio.toFixed(3);
+        document.getElementById('brow-val').innerText = packet.brow_dist.toFixed(3);
+        document.getElementById('mouth-val').innerText = packet.mouth_tension.toFixed(3);
+        document.getElementById('pulse-val').innerText = packet.pulse_val.toFixed(1);
+
+        // 1. First, show result from JS logic (Instant)
+        const local = runInternalLogic(packet);
+        updateUI(local, "LOCAL");
+
+        // 2. Then, try to get more accurate result from Python Backend
         fetch('/api/analyze', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(packet)
         })
         .then(r => r.json())
-        .then(d => {
-            document.getElementById('score-text').innerText = Math.round(d.score || 0);
-            document.getElementById('verdict-text').innerText = d.verdict || "STABLE";
-            document.getElementById('state-val').innerText = d.mind_state || "UNKNOWN";
-            document.getElementById('jitter-val').innerText = mouseJitter.toFixed(2);
-            document.getElementById('eye-val').innerText = packet.eye.toFixed(3);
-            document.getElementById('brow-val').innerText = packet.brow.toFixed(3);
-            document.getElementById('status').innerHTML = "STATUS: <span style='color:var(--green)'>SYNC_OK</span>";
-        }).catch(() => {
-            document.getElementById('status').innerHTML = "STATUS: <span style='color:var(--red)'>BACKEND_ERROR</span>";
-        });
-        canvasCtx.restore();
+        .then(remote => updateUI(remote, "REMOTE"))
+        .catch(() => document.getElementById('status').innerText = "STATUS: LOCAL_ONLY");
+
+        baselineJitter = (baselineJitter * 0.9) + (mouseJitter * 0.1);
+        ctx.restore();
     });
+
+    function updateUI(data, src) {
+        document.getElementById('score-text').innerText = Math.round(data.score);
+        document.getElementById('verdict-text').innerText = data.verdict;
+        document.getElementById('state-val').innerText = data.mind_state;
+        if(src === "REMOTE") document.getElementById('status').innerText = "STATUS: SYNC_OK";
+    }
 
     async function init() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } 
-            });
-            videoElement.srcObject = stream;
-            videoElement.onloadedmetadata = () => {
-                videoElement.play();
-                document.getElementById('status').innerText = "STATUS: SCANNING...";
-                requestAnimationFrame(runTask);
-            };
-        } catch (e) {
-            alert("ক্যামেরা এক্সেস দিন এবং পেজ রিফ্রেশ করুন।");
-        }
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => { video.play(); requestAnimationFrame(loop); };
+        } catch (e) { alert("Camera Permission Required"); }
     }
 
-    async function runTask() {
-        if (videoElement.readyState === 4) {
-            await faceMesh.send({image: videoElement});
-        }
-        requestAnimationFrame(runTask);
+    async function loop() {
+        if (video.readyState === 4) await faceMesh.send({image: video});
+        requestAnimationFrame(loop);
     }
-
     window.onload = init;
 </script>
 </body>
