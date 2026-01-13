@@ -1,218 +1,133 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MicroMind</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mental & Personality Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --cyan: #00f2ff; --green: #00ff41; --red: #ff0055; --bg: #000; }
-        * { box-sizing: border-box; outline: none; }
-        body { background: var(--bg); color: var(--cyan); font-family: 'Orbitron', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        /* UI Elements */
-        #header { height: 40px; border-bottom: 1px solid var(--cyan); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.7rem; background: rgba(0,20,30,0.9); }
-        #workspace { flex: 1; position: relative; display: flex; flex-direction: row; }
-        #sidebar { width: 280px; border-right: 1px solid var(--cyan); background: rgba(0,10,15,0.9); padding: 15px; display: flex; flex-direction: column; z-index: 10; }
-
-        #camera-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        video#input_video { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
-        canvas#face-canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-        .btn { border: 1px solid var(--cyan); background: transparent; color: var(--cyan); padding: 12px; cursor: pointer; font-family: 'Orbitron'; font-size: 0.65rem; margin-bottom: 10px; transition: 0.3s; width: 100%; }
-        .btn.active { background: rgba(0, 242, 255, 0.2); border-color: var(--green); color: var(--green); }
-        .trigger-btn { border: 1px solid var(--red); color: var(--red); font-weight: bold; margin-top: auto; }
-        .trigger-btn.active { background: var(--red); color: white; box-shadow: 0 0 20px var(--red); }
-
-        /* HUD & Data Display */
-        #hud { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 5, 10, 0.95); border-top: 1px solid var(--cyan); padding: 15px; display: grid; grid-template-columns: 140px 1fr; gap: 20px; z-index: 20; }
-        .score-box { text-align: center; border-right: 1px solid rgba(0,242,255,0.3); }
-        .score-val { font-size: 2.5rem; font-weight: bold; color: var(--red); text-shadow: 0 0 10px var(--red); }
-        
-        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: 'Rajdhani'; font-size: 0.9rem; }
-        .data-item { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,242,255,0.1); padding: 3px 0; }
-        .data-item span { color: rgba(0,242,255,0.5); font-size: 0.7rem; text-transform: uppercase; }
-
-        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--cyan); top: 0; box-shadow: 0 0 15px var(--cyan); opacity: 0.3; animation: scan 4s linear infinite; pointer-events: none; z-index: 5; }
-        
-        /* Footer Style */
-        #footer { 
-            height: 25px; 
-            border-top: 1px solid rgba(0, 242, 255, 0.3); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-size: 0.55rem; 
-            background: rgba(0, 10, 15, 0.9); 
-            letter-spacing: 2px; 
-            color: rgba(0, 242, 255, 0.6);
+        body {
+            background-color: #050505;
+            color: #00ff41; /* Matrix Green */
+            font-family: 'Fira Code', monospace;
+            overflow-x: hidden;
         }
 
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .neon-border {
+            border: 2px solid #00ff41;
+            box-shadow: 0 0 15px #00ff41, inset 0 0 5px #00ff41;
+        }
 
-        @media (max-width: 850px) {
-            #workspace { flex-direction: column; }
-            #sidebar { width: 100%; height: auto; order: 2; border-right: none; border-top: 1px solid var(--cyan); }
-            #hud { order: 3; position: relative; grid-template-columns: 1fr; }
+        .neon-text {
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        .scanner-line {
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 65, 0.5);
+            position: absolute;
+            top: 0;
+            animation: scan 3s linear infinite;
+            box-shadow: 0 0 15px #00ff41;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(0, 255, 65, 0.1);
+            transform: translateY(-5px);
         }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
 
-<div id="header">
-    <div>MicroMind</div>
-    <div id="status">STATUS: BOOTING...</div>
-    <div id="clock">00:00:00</div>
-</div>
+    <header class="text-center mb-10">
+        <h1 class="text-3xl md:text-5xl font-bold neon-text tracking-tighter uppercase italic">
+            Mental Analyzer v2.0
+        </h1>
+        <p class="text-xs md:text-sm mt-2 opacity-70">SYSTEM STATUS: <span class="animate-pulse">ONLINE [SECURE ACCESS]</span></p>
+    </header>
 
-<div id="workspace">
-    <div id="sidebar">
-        <button id="cam-btn" class="btn active" onclick="setMode('camera')">OPTIC_FACS_SCAN</button>
-        <button id="mou-btn" class="btn" onclick="setMode('mouse')">MOUSE_JITTER_SYNC</button>
-        <button id="bio-btn" class="btn" onclick="setMode('heartbeat')">BIO_THERMAL_PULSE</button>
-        <button id="trigger-btn" class="btn trigger-btn" onclick="fireTrigger()">START_INTERROGATION</button>
-    </div>
-
-    <div id="camera-container">
-        <div class="scan-line"></div>
-        <video id="input_video" playsinline muted autoplay></video>
-        <canvas id="face-canvas"></canvas>
-    </div>
-
-    <div id="hud">
-        <div class="score-box">
-            <small>STRESS_IDX</small>
-            <div class="score-val"><span id="score-text">00</span>%</div>
-            <div id="verdict-text" style="font-size: 0.6rem; color: var(--green);">CALIBRATING...</div>
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <div class="relative neon-border rounded-lg overflow-hidden h-[300px] md:h-[450px]">
+            <div class="scanner-line"></div>
+            <img src="/video_feed" class="w-full h-full object-cover" alt="System Scanning...">
+            <div class="absolute bottom-4 left-4 bg-black/70 px-3 py-1 text-xs border border-green-500">
+                LIVE_FEED_01 // ACCESSING_BIOMETRICS
+            </div>
         </div>
-        <div class="data-grid">
-            <div class="data-item"><span>MIND_STATE:</span><b id="state-val">-</b></div>
-            <div class="data-item"><span>JITTER_TRM:</span><b id="jitter-val">0.00</b></div>
-            <div class="data-item"><span>OCULAR_RAT:</span><b id="eye-val">0.00</b></div>
-            <div class="data-item"><span>THERMAL_SKIN:</span><b id="pulse-val">0.00</b></div>
-            <div class="data-item"><span>NEURAL_TEN:</span><b id="brow-val">0.00</b></div>
-            <div class="data-item"><span>MOUTH_STRESS:</span><b id="mouth-val">0.00</b></div>
-        </div>
-    </div>
-</div>
 
-<div id="footer">
-    Humayun Shariar Himu 
-</div>
-
-<script>
-    const video = document.getElementById('input_video');
-    const canvas = document.getElementById('face-canvas');
-    const ctx = canvas.getContext('2d');
-    let currentMode = 'camera', isTriggered = false, mouseJitter = 0, baselineJitter = 1.2;
-
-    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
-
-    function setMode(m) {
-        currentMode = m;
-        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(m.substring(0,3) + '-btn').classList.add('active');
-    }
-
-    function fireTrigger() {
-        isTriggered = true;
-        document.getElementById('trigger-btn').classList.add('active');
-        setTimeout(() => { isTriggered = false; document.getElementById('trigger-btn').classList.remove('active'); }, 5000);
-    }
-
-    document.addEventListener('mousemove', (e) => {
-        mouseJitter = Math.sqrt(e.movementX**2 + e.movementY**2);
-    });
-
-    // --- JS Frontend Internal Logic ---
-    function runInternalLogic(p) {
-        let score = (Math.abs(p.current_jitter - p.baseline_jitter) * 5);
-        if (p.brow_dist < 0.1) score += 20;
-        if (p.eye_ratio < 0.05) score += 25;
-        if (p.is_triggered) score *= 1.3;
-        score = Math.min(score, 100);
-
-        let verdict = score > 70 ? "DECEPTION" : (score > 40 ? "ANXIETY" : "STABLE");
-        let state = score > 70 ? "Defensive" : "Coherent";
-        return { score, verdict, mind_state: state };
-    }
-
-    const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
-
-    faceMesh.onResults((results) => {
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        ctx.save();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
-        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-        let packet = {
-            baseline_jitter: baselineJitter,
-            current_jitter: mouseJitter,
-            brow_dist: 0.5, eye_ratio: 0.5, mouth_tension: 0.0,
-            pulse_val: (currentMode === 'heartbeat') ? (mouseJitter + 60) : 72,
-            mode: currentMode, is_triggered: isTriggered
-        };
-
-        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            const l = results.multiFaceLandmarks[0];
-            packet.brow_dist = Math.abs(l[10].y - l[151].y);
-            packet.eye_ratio = Math.abs(l[159].y - l[145].y);
-            packet.mouth_tension = Math.abs(l[13].y - l[14].y);
+        <div class="space-y-6">
             
-            ctx.fillStyle = "#00ff41";
-            [10, 151, 159, 13].forEach(i => ctx.fillRect(l[i].x * canvas.width, l[i].y * canvas.height, 3, 3));
-        }
+            <div class="glass-panel p-6 rounded-lg border-l-4 border-l-green-500 shadow-lg">
+                <h3 class="text-xl font-bold mb-2 flex items-center">
+                    <span class="mr-2">⚡</span> CURRENT MENTAL STATE
+                </h3>
+                <div id="mental-state" class="text-2xl text-white font-bold neon-text">
+                    ANALYZING...
+                </div>
+                <p id="advice" class="text-sm mt-2 text-gray-400 italic">
+                    Waiting for facial input to generate psychological advice.
+                </p>
+            </div>
 
-        // Display Real-time Sensor Data
-        document.getElementById('jitter-val').innerText = mouseJitter.toFixed(2);
-        document.getElementById('eye-val').innerText = packet.eye_ratio.toFixed(3);
-        document.getElementById('brow-val').innerText = packet.brow_dist.toFixed(3);
-        document.getElementById('mouth-val').innerText = packet.mouth_tension.toFixed(3);
-        document.getElementById('pulse-val').innerText = packet.pulse_val.toFixed(1);
+            <div class="glass-panel p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4 border-b border-green-900 pb-2">OCEAN PERSONALITY PROFILE</h3>
+                <div class="grid grid-cols-2 gap-4" id="traits-container">
+                    <div class="stat-card border border-green-900 p-3 rounded">
+                        <span class="block text-xs text-gray-500">OPENNESS</span>
+                        <span class="font-bold text-lg" id="trait-o">--</span>
+                    </div>
+                    <div class="stat-card border border-green-900 p-3 rounded">
+                        <span class="block text-xs text-gray-500">CONSCIENTIOUSNESS</span>
+                        <span class="font-bold text-lg" id="trait-c">--</span>
+                    </div>
+                    <div class="stat-card border border-green-900 p-3 rounded">
+                        <span class="block text-xs text-gray-500">EXTROVERSION</span>
+                        <span class="font-bold text-lg" id="trait-e">--</span>
+                    </div>
+                    <div class="stat-card border border-green-900 p-3 rounded">
+                        <span class="block text-xs text-gray-500">AGREEABLENESS</span>
+                        <span class="font-bold text-lg" id="trait-a">--</span>
+                    </div>
+                    <div class="stat-card border border-green-900 p-3 rounded col-span-2">
+                        <span class="block text-xs text-gray-500">NEUROTICISM</span>
+                        <span class="font-bold text-lg" id="trait-n">--</span>
+                    </div>
+                </div>
+            </div>
 
-        // 1. First, show result from JS logic (Instant)
-        const local = runInternalLogic(packet);
-        updateUI(local, "LOCAL");
+            <div class="bg-black p-4 h-32 overflow-y-auto border border-green-900 rounded text-[10px] font-mono text-green-700">
+                <p>[SYSTEM] Booting AI Core...</p>
+                <p>[SYSTEM] MediaPipe Mesh initialized.</p>
+                <p>[SYSTEM] DeepFace models loaded in VRAM.</p>
+                <p>[DATA] Synchronizing personality vectors...</p>
+                <p class="animate-pulse">> Waiting for subject detection...</p>
+            </div>
+        </div>
+    </div>
 
-        // 2. Then, try to get more accurate result from Python Backend
-        fetch('/api/analyze', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(packet)
-        })
-        .then(r => r.json())
-        .then(remote => updateUI(remote, "REMOTE"))
-        .catch(() => document.getElementById('status').innerText = "STATUS: LOCAL_ONLY");
+    <div class="mt-10 text-center">
+        <button onclick="window.location.reload()" class="px-8 py-3 bg-green-600 hover:bg-green-500 text-black font-bold uppercase tracking-widest transition-all rounded shadow-[0_0_20px_rgba(0,255,65,0.5)]">
+            Restart Matrix Analysis
+        </button>
+    </div>
 
-        baselineJitter = (baselineJitter * 0.9) + (mouseJitter * 0.1);
-        ctx.restore();
-    });
-
-    function updateUI(data, src) {
-        document.getElementById('score-text').innerText = Math.round(data.score);
-        document.getElementById('verdict-text').innerText = data.verdict;
-        document.getElementById('state-val').innerText = data.mind_state;
-        if(src === "REMOTE") document.getElementById('status').innerText = "STATUS: SYNC_OK";
-    }
-
-    async function init() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => { video.play(); requestAnimationFrame(loop); };
-        } catch (e) { alert("Camera Permission Required"); }
-    }
-
-    async function loop() {
-        if (video.readyState === 4) await faceMesh.send({image: video});
-        requestAnimationFrame(loop);
-    }
-    window.onload = init;
-</script>
 </body>
 </html>
-
