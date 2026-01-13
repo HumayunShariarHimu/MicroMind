@@ -1,9 +1,0 @@
-opencv-python
-numpy
-mediapipe
-deepface
-tf-keras
-tensorflow
-librosa
-sounddevice
-scipy
