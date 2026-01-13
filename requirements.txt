@@ -1,4 +1,9 @@
-fastapi
-uvicorn
+opencv-python
 numpy
-pydantic
+mediapipe
+deepface
+tf-keras
+tensorflow
+librosa
+sounddevice
+scipy
