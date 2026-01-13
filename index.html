@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MicroMind</title>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+:root { --neon: #00ff41; --bg: #050505; }
+* { box-sizing: border-box; margin:0; padding:0; }
+body { background: var(--bg); color: var(--neon); font-family: 'Share Tech Mono', monospace; display:flex; flex-direction:column; align-items:center; min-height:100vh; overflow-x:hidden; }
+#loader { position: fixed; inset:0; background:#000; z-index:1000; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+.loading-bar { width:200px; height:2px; background:#020; margin-top:10px; overflow:hidden; position:relative; }
+.loading-bar::after { content:""; position:absolute; width:50px; height:100%; background:var(--neon); animation:load 1.5s infinite; }
+@keyframes load { 0%{left:-50px;}100%{left:200px;} }
+.logo { font-size:1.5rem; letter-spacing:5px; padding:20px; text-shadow:0 0 10px var(--neon); }
+.scanner-box { position:relative; width:90%; max-width:600px; border:1px solid var(--neon); box-shadow:0 0 20px rgba(0,255,65,0.2); overflow:hidden; margin-top:20px; }
+video { width:100%; display:block; filter:grayscale(100%) brightness(1.2); }
+canvas { position:absolute; top:0; left:0; width:100% !important; height:100% !important; }
+.scan-line { position:absolute; width:100%; height:2px; background:var(--neon); box-shadow:0 0 10px var(--neon); top:0; animation:scan 4s linear infinite; z-index:5; }
+@keyframes scan { 0%{top:0;}100%{top:100%;} }
+.terminal { width:90%; max-width:600px; margin-top:20px; padding:15px; border:1px solid #030; background:rgba(0,20,0,0.4); display:grid; grid-template-columns:1fr; gap:10px; }
+@media (min-width:600px){.terminal{grid-template-columns:1fr 1fr;}}
+.stat-field{border-left:2px solid var(--neon);padding-left:10px;}
+.label{font-size:10px;opacity:0.6;}
+.data{font-size:14px;margin-top:2px;text-transform:uppercase;}
+button{margin-top:15px;padding:8px 12px;background:#010; color:var(--neon); border:1px solid var(--neon); cursor:pointer; text-transform:uppercase; font-size:12px; transition:0.3s;}
+button:hover{background:var(--neon); color:#000;}
+</style>
+</head>
+<body>
+
+<div id="loader">
+    <div class="logo">MicroMind</div>
+    <div style="font-size:12px;">Human Psychology Analysis System</div>
+    <div class="loading-bar"></div>
+</div>
+
+<div class="logo">MicroMind</div>
+
+<div class="scanner-box" id="scanner">
+    <div class="scan-line"></div>
+    <video id="video" autoplay muted playsinline></video>
+</div>
+
+<div class="terminal">
+    <div class="stat-field"><div class="label">EMOTION</div><div id="e-val" class="data">...</div></div>
+    <div class="stat-field"><div class="label">CONDITION</div><div id="c-val" class="data">...</div></div>
+    <div class="stat-field"><div class="label">PERSONALITY</div><div id="p-val" class="data">...</div></div>
+    <div class="stat-field"><div class="label">NEURAL SYNC</div><div id="s-val" class="data">0%</div></div>
+    <button onclick="simulateSync()">SYNC NOW</button>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+
+async function bootSystem(){
+    if(typeof faceapi === 'undefined'){ setTimeout(bootSystem,500); return; }
+    await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+    ]);
+    const stream = await navigator.mediaDevices.getUserMedia({video:true});
+    video.srcObject = stream;
+    video.onloadedmetadata = ()=>{
+        document.getElementById('loader').style.display='none';
+        startAnalysis();
+    };
+}
+
+async function startAnalysis(){
+    const canvas = faceapi.createCanvasFromMedia(video);
+    document.getElementById('scanner').append(canvas);
+    const size = {width:video.offsetWidth,height:video.offsetHeight};
+    faceapi.matchDimensions(canvas,size);
+
+    setInterval(async ()=>{
+        const results = await faceapi.detectAllFaces(video,new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+        const resized = faceapi.resizeResults(results,size);
+        canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+        faceapi.draw.drawDetections(canvas,resized);
+
+        if(results.length>0){
+            const exp = results[0].expressions;
+            const top = Object.keys(exp).reduce((a,b)=>exp[a]>exp[b]?a:b);
+            updateUI(top,Math.round(exp[top]*100));
+        }
+    },200);
+}
+
+function updateUI(emo,sync){
+    const map = {
+        happy:["Optimal/Stable","Extrovert"],
+        sad:["Low/Reflective","Introspective"],
+        angry:["High/Hostile","Assertive"],
+        neutral:["Logic/Balanced","Analytical"],
+        surprised:["Alert/High","Adaptive"],
+        fearful:["Anxiety/Unsafe","Cautious"],
+        disgusted:["Aversive","Critical"]
+    };
+    const [cond,pers]=map[emo]||["---","---"];
+    document.getElementById('e-val').innerText=emo;
+    document.getElementById('c-val').innerText=cond;
+    document.getElementById('p-val').innerText=pers;
+    document.getElementById('s-val').innerText=sync+"%";
+}
+
+function simulateSync(){
+    let val=0;
+    const interval=setInterval(()=>{
+        val+=Math.floor(Math.random()*10+5);
+        if(val>=100){val=100; clearInterval(interval);}
+        document.getElementById('s-val').innerText=val+"%";
+    },150);
+}
+
+window.onload=bootSystem;
+</script>
+</body>
+</html>
