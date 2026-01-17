@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MicroMind</title>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;600&family=Noto+Sans+Bengali:wght@400;700&display=swap');
+
+        :root {
+            --neon: #00ff41;
+            --warning: #ffaa00;
+            --danger: #ff003c;
+            --bg-black: #050505;
+            --panel: rgba(10, 25, 10, 0.95);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon);
+            font-family: 'Oxanium', 'Noto Sans Bengali', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto; /* স্ক্রল সচল নিশ্চিত করা হলো */
+        }
+
+        .hud-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--neon);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, #0a1f0a 0%, transparent 100%);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .main-frame {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            flex: 1;
+            gap: 15px;
+            padding: 15px;
+            width: 100%;
+        }
+
+        /* মোবাইল রেসপন্সিভনেস আপডেট */
+        @media (max-width: 1100px) {
+            .main-frame { 
+                display: flex; 
+                flex-direction: column; 
+                padding: 10px;
+            }
+            .viewport { 
+                height: 50vh; 
+                min-height: 300px;
+                order: -1; /* ভিডিও বক্স সবার উপরে থাকবে */
+            }
+            .sidebar {
+                width: 100%;
+            }
+        }
+
+        .viewport {
+            position: relative;
+            border: 2px solid var(--neon);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
+        }
+        
+        video { width: 100%; height: 100%; object-fit: cover; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
+
+        .controls {
+            position: absolute; bottom: 15px; left: 15px; right: 15px;
+            display: flex; justify-content: space-between; z-index: 20;
+        }
+        .btn-sci {
+            background: rgba(0, 255, 65, 0.2);
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 10px;
+            text-transform: uppercase;
+            backdrop-filter: blur(5px);
+            border-radius: 4px;
+        }
+
+        .sidebar { background: var(--panel); border: 1px solid #1a3a1a; padding: 15px; border-radius: 5px; height: fit-content; }
+        .indicator-box { padding: 12px; border: 1px solid #224422; margin-bottom: 10px; background: rgba(0, 20, 0, 0.5); }
+        .label { font-size: 10px; text-transform: uppercase; color: #558855; margin-bottom: 4px; }
+        .value { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+
+        #boot-screen {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        /* ফুটার স্টাইল */
+        .hud-footer {
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
+            border-top: 1px solid rgba(0, 255, 65, 0.3);
+            background: rgba(0, 10, 0, 0.8);
+            letter-spacing: 1px;
+            color: #558855;
+        }
+        .credit { color: var(--neon); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="boot-screen">
+    <h1 style="text-shadow: 0 0 20px var(--neon); margin-bottom: 10px;">MicroMind</h1>
+    <p id="boot-status">Initializing Neural Networks...</p>
+</div>
+
+<header class="hud-header">
+    <div style="font-size: 10px;">STATUS: <span id="sys-status" style="color:var(--neon)">ONLINE</span></div>
+    <div style="font-weight: bold; letter-spacing: 2px;">MicroMind</div>
+    <div id="clock">00:00:00</div>
+</header>
+
+<main class="main-frame">
+    <section class="viewport" id="main-view">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="controls">
+            <button class="btn-sci" onclick="switchCamera()">Lens Switch</button>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-sci" onclick="adjustZoom(0.2)">+</button>
+                <button class="btn-sci" onclick="adjustZoom(-0.2)">-</button>
+            </div>
+        </div>
+    </section>
+
+    <aside class="sidebar">
+        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 15px; font-size: 0.8rem; padding-bottom: 5px;">BIOMETRIC DATA</h3>
+        <div class="indicator-box"><div class="label">Asymmetry Index</div><div id="val-asymmetry" class="value">0.00</div></div>
+        <div class="indicator-box"><div class="label">Neural Tension</div><div id="val-tension" class="value">STABLE</div></div>
+        <div class="indicator-box"><div class="label">Primary Emotion</div><div id="main-emotion" class="value" style="color: #fff;">-</div></div>
+    </aside>
+
+    <aside class="sidebar">
+        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 15px; font-size: 0.8rem; padding-bottom: 5px;">AI VERDICT</h3>
+        <div id="verdict-box" style="font-size: 14px; color: #fff; background: rgba(0,255,65,0.05); padding: 15px; border-left: 3px solid var(--neon); line-height: 1.6;">
+            ফেস ডিটেকশনের জন্য অপেক্ষা করা হচ্ছে...
+        </div>
+    </aside>
+</main>
+
+<footer class="hud-footer">
+    MicroMind <span class="credit">Humayun Shariar Himu</span> All Rights Reserved
+</footer>
+
+<script>
+    const video = document.getElementById('video');
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+    let currentStream = null;
+    let useFrontCamera = true;
+    let currentZoom = 1.0;
+    let canvas = null;
+
+    async function initSystem() {
+        try {
+            document.getElementById('boot-status').innerText = "Loading Models...";
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+            ]);
+            startCamera();
+        } catch (e) {
+            document.getElementById('boot-status').innerText = "ERROR: Failed to load models";
+        }
+    }
+
+    async function startCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
+        const constraints = { video: { facingMode: useFrontCamera ? "user" : "environment" } };
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+            video.onloadedmetadata = () => {
+                document.getElementById('boot-screen').style.display = 'none';
+                setupAnalysis();
+            };
+        } catch (err) {
+            alert("Camera Access Denied!");
+        }
+    }
+
+    function switchCamera() {
+        useFrontCamera = !useFrontCamera;
+        startCamera();
+    }
+
+    function adjustZoom(val) {
+        currentZoom = Math.max(1, Math.min(3, currentZoom + val));
+        video.style.transform = `scale(${currentZoom})`;
+    }
+
+    async function setupAnalysis() {
+        if(canvas) canvas.remove();
+        canvas = faceapi.createCanvasFromMedia(video);
+        document.getElementById('main-view').append(canvas);
+        const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        const run = async () => {
+            if (video.paused || video.ended) return;
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceExpressions();
+            
+            const resized = faceapi.resizeResults(detections, displaySize);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (resized.length > 0) {
+                faceapi.draw.drawFaceLandmarks(canvas, resized);
+                analyzeData(resized[0]);
+            }
+            requestAnimationFrame(run);
+        };
+        run();
+    }
+
+    const emotionMap = {
+        neutral: "স্বাভাবিক", happy: "সুখী", sad: "দুঃখিত", 
+        angry: "রাগান্বিত", fearful: "ভীত", disgusted: "বিরক্ত", surprised: "বিস্মিত"
+    };
+
+    function analyzeData(data) {
+        const exps = data.expressions;
+        const marks = data.landmarks;
+        
+        const leftEye = marks.getLeftEye();
+        const rightEye = marks.getRightEye();
+        const asymmetry = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
+        document.getElementById('val-asymmetry').innerText = asymmetry;
+
+        const topEmotion = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
+        document.getElementById('main-emotion').innerText = topEmotion.toUpperCase();
+        
+        document.getElementById('verdict-box').innerText = `আবেগ: ${emotionMap[topEmotion]}. পরিস্থিতি বিশ্লেষণ করা হচ্ছে...`;
+    }
+
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+    window.onload = initSystem;
+    window.addEventListener('resize', setupAnalysis);
+</script>
+</body>
+</html>
