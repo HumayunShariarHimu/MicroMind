@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MicroMind</title>
+    <title>MicroMind Pro</title>
     
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;600&family=Noto+Sans+Bengali:wght@400;700&display=swap');
@@ -26,7 +26,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
         .hud-header {
@@ -40,16 +40,16 @@
 
         .main-frame {
             display: grid;
-            grid-template-columns: 320px 1fr 320px;
+            grid-template-columns: 280px 1fr 280px;
             flex: 1;
-            gap: 10px;
-            padding: 10px;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 60px);
         }
 
-        @media (max-width: 1100px) {
-            .main-frame { grid-template-columns: 1fr; display: block; }
-            .sidebar { margin-bottom: 10px; }
-            .viewport { height: 50vh; margin-bottom: 10px; }
+        @media (max-width: 1000px) {
+            .main-frame { grid-template-columns: 1fr; overflow-y: auto; display: flex; flex-direction: column; }
+            .viewport { min-height: 300px; height: 50vh; }
         }
 
         .viewport {
@@ -61,8 +61,8 @@
             box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
         }
         
-        video { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
-        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
 
         .controls {
             position: absolute; bottom: 15px; left: 15px; right: 15px;
@@ -72,74 +72,83 @@
             background: rgba(0, 255, 65, 0.2);
             border: 1px solid var(--neon);
             color: var(--neon);
-            padding: 8px 12px;
+            padding: 10px 15px;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
             backdrop-filter: blur(5px);
+            border-radius: 4px;
         }
 
         .sidebar { background: var(--panel); border: 1px solid #1a3a1a; padding: 15px; border-radius: 5px; }
-        .indicator-box { padding: 10px; border: 1px solid #224422; margin-bottom: 8px; background: rgba(0, 20, 0, 0.5); }
-        .label { font-size: 9px; text-transform: uppercase; color: #558855; }
-        .value { font-size: 14px; font-weight: bold; }
+        .indicator-box { padding: 12px; border: 1px solid #224422; margin-bottom: 10px; background: rgba(0, 20, 0, 0.5); }
+        .label { font-size: 10px; text-transform: uppercase; color: #558855; margin-bottom: 4px; }
+        .value { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
 
         #boot-screen {
             position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
+
+        .emotion-tag { color: #fff; text-shadow: 0 0 5px var(--neon); }
     </style>
 </head>
 <body>
 
 <div id="boot-screen">
-    <h1 style="text-shadow: 0 0 20px var(--neon);">MicroMind</h1>
-    <p id="boot-status">System Intilizing...</p>
+    <h1 style="text-shadow: 0 0 20px var(--neon); margin-bottom: 10px;">MicroMind</h1>
+    <p id="boot-status">Initializing Neural Networks...</p>
 </div>
 
 <header class="hud-header">
-    <div style="font-size: 10px;">LATENCY: <span id="lat">12ms</span></div>
-    <div style="font-weight: bold;">MicroMind</div>
+    <div style="font-size: 10px;">STATUS: <span id="sys-status" style="color:var(--neon)">ONLINE</span></div>
+    <div style="font-weight: bold; letter-spacing: 3px;">MicroMind</div>
     <div id="clock">00:00:00</div>
 </header>
 
 <main class="main-frame">
     <aside class="sidebar">
-        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 10px; font-size: 0.8rem;">BIOMETRIC DATA</h3>
-        <div class="indicator-box"><div class="label">Asymmetry</div><div id="val-asymmetry" class="value">0.00</div></div>
-        <div class="indicator-box"><div class="label">Neural Tension</div><div id="val-tension" class="value">LOW</div></div>
-        <div class="indicator-box"><div class="label">Eye Status</div><div id="val-eye" class="value">ANALYZING</div></div>
+        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 15px; font-size: 0.8rem; padding-bottom: 5px;">BIOMETRIC DATA</h3>
+        <div class="indicator-box"><div class="label">Asymmetry Index</div><div id="val-asymmetry" class="value">0.00</div></div>
+        <div class="indicator-box"><div class="label">Neural Tension</div><div id="val-tension" class="value">STABLE</div></div>
+        <div class="indicator-box"><div class="label">Pulse Proxy</div><div id="val-pulse" class="value">72 BPM</div></div>
     </aside>
 
     <section class="viewport" id="main-view">
         <video id="video" autoplay muted playsinline></video>
         <div class="controls">
-            <button class="btn-sci" onclick="switchCamera()">Switch Camera</button>
-            <div style="display:flex; gap:5px;">
-                <button class="btn-sci" onclick="adjustZoom(0.2)">+</button>
-                <button class="btn-sci" onclick="adjustZoom(-0.2)">-</button>
+            <button class="btn-sci" onclick="switchCamera()">Switch Lens</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-sci" onclick="adjustZoom(0.2)">ZOOM +</button>
+                <button class="btn-sci" onclick="adjustZoom(-0.2)">ZOOM -</button>
             </div>
         </div>
     </section>
 
     <aside class="sidebar">
-        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 10px; font-size: 0.8rem;">AI VERDICT</h3>
-        <div id="verdict-box" style="font-size: 12px; color: #fff; background: rgba(0,255,65,0.05); padding: 10px; border-left: 2px solid var(--neon);">
-            Waiting for face...
+        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 15px; font-size: 0.8rem; padding-bottom: 5px;">AI VERDICT</h3>
+        <div id="verdict-box" style="font-size: 14px; color: #fff; background: rgba(0,255,65,0.05); padding: 15px; border-left: 3px solid var(--neon); line-height: 1.6;">
+            ফেস ডিটেকশনের জন্য অপেক্ষা করা হচ্ছে...
+        </div>
+        <div class="indicator-box" style="margin-top:20px;">
+            <div class="label">Primary Emotion</div>
+            <div id="main-emotion" class="value" style="color: #fff;">-</div>
         </div>
     </aside>
 </main>
 
 <script>
     const video = document.getElementById('video');
-    const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
     let currentStream = null;
     let useFrontCamera = true;
     let currentZoom = 1.0;
     let canvas = null;
+    let displaySize = { width: 0, height: 0 };
 
     async function initSystem() {
         try {
+            document.getElementById('boot-status').innerText = "Loading....";
             await Promise.all([
                 faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -147,7 +156,8 @@
             ]);
             startCamera();
         } catch (e) {
-            document.getElementById('boot-status').innerText = "AI ENGINE ERROR";
+            console.error(e);
+            document.getElementById('boot-status').innerText = "ERROR: Failed to load models";
         }
     }
 
@@ -158,9 +168,7 @@
 
         const constraints = {
             video: { 
-                facingMode: useFrontCamera ? "user" : "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+                facingMode: useFrontCamera ? "user" : "environment"
             }
         };
 
@@ -168,17 +176,20 @@
             currentStream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = currentStream;
             video.onloadedmetadata = () => {
-                document.getElementById('boot-screen').style.display = 'none';
+                document.getElementById('boot-screen').style.fadeOut = "slow";
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                }, 500);
                 setupAnalysis();
             };
         } catch (err) {
-            alert("Camera Error: " + err.message);
+            alert("Camera Access Denied!");
         }
     }
 
     function switchCamera() {
         useFrontCamera = !useFrontCamera;
-        if (canvas) canvas.remove(); // Remove old canvas on switch
+        if (canvas) canvas.remove();
         startCamera();
     }
 
@@ -188,47 +199,92 @@
     }
 
     async function setupAnalysis() {
+        if(canvas) canvas.remove();
+        
         canvas = faceapi.createCanvasFromMedia(video);
         document.getElementById('main-view').append(canvas);
-        const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
+        
+        displaySize = { width: video.offsetWidth, height: video.offsetHeight };
         faceapi.matchDimensions(canvas, displaySize);
 
-        setInterval(async () => {
-            if (video.paused || video.ended) return;
-            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceExpressions();
-
-            const resized = faceapi.resizeResults(detections, displaySize);
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (resized.length > 0) {
-                faceapi.draw.drawFaceLandmarks(canvas, resized);
-                analyzeData(resized[0]);
-            }
-        }, 100);
+        runDetection();
     }
+
+    async function runDetection() {
+        if (video.paused || video.ended) return;
+
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks()
+            .withFaceExpressions();
+
+        const resized = faceapi.resizeResults(detections, displaySize);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (resized.length > 0) {
+            faceapi.draw.drawFaceLandmarks(canvas, resized);
+            analyzeData(resized[0]);
+        } else {
+            document.getElementById('main-emotion').innerText = "NOT DETECTED";
+        }
+
+        requestAnimationFrame(runDetection);
+    }
+
+    const emotionMap = {
+        neutral: "স্বাভাবিক",
+        happy: "সুখী",
+        sad: "দুঃখিত",
+        angry: "রাগান্বিত",
+        fearful: "ভীত",
+        disgusted: "বিরক্ত",
+        surprised: "বিস্মিত"
+    };
 
     function analyzeData(data) {
         const marks = data.landmarks;
         const exps = data.expressions;
         
-        // 10 Psych Points Logic (Same as before)
+        // Asymmetry calculation
         const leftEye = marks.getLeftEye();
         const rightEye = marks.getRightEye();
         const asymmetry = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
         document.getElementById('val-asymmetry').innerText = asymmetry;
 
+        // Neural Tension (Based on mouth opening/tightness)
         const mouth = marks.getMouth();
-        const lipDist = Math.abs(mouth[14].y - mouth[18].y);
-        document.getElementById('val-tension').innerText = lipDist < 1.8 ? "HIGH" : "NORMAL";
+        const mouthHeight = Math.abs(mouth[14].y - mouth[18].y);
+        const tensionValue = mouthHeight < 2 ? "HIGH" : "NORMAL";
+        document.getElementById('val-tension').innerText = tensionValue;
 
-        const top = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
-        document.getElementById('verdict-box').innerText = `আবেগ: ${top.toUpperCase()}. ${lipDist < 1.8 ? "তথ্য গোপনের সম্ভাবনা রয়েছে।" : "স্বাভাবিক আচরণ।"}`;
+        // Get dominant emotion
+        const topEmotion = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
+        const banglaEmotion = emotionMap[topEmotion] || topEmotion;
+        
+        // Update Displays
+        document.getElementById('main-emotion').innerText = topEmotion.toUpperCase();
+        
+        let verdict = `আবেগ: ${banglaEmotion}। `;
+        if (topEmotion === 'neutral' && tensionValue === 'HIGH') {
+            verdict += "ব্যক্তি আবেগ গোপন করার চেষ্টা করছে।";
+        } else if (topEmotion === 'angry' || topEmotion === 'fearful') {
+            verdict += "সতর্কতা: মানসিক উত্তেজনা পরিলক্ষিত হচ্ছে।";
+        } else {
+            verdict += "আচরণ স্বাভাবিক বলে মনে হচ্ছে।";
+        }
+        
+        document.getElementById('verdict-box').innerText = verdict;
     }
 
-    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+    // Window resize handler
+    window.addEventListener('resize', () => {
+        if(video.srcObject) setupAnalysis();
+    });
+
+    setInterval(() => { 
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString(); 
+    }, 1000);
+
     window.onload = initSystem;
 </script>
 </body>
