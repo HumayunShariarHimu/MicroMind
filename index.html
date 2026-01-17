@@ -1,124 +1,235 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MicroMind</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MicroMind</title>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;600&family=Noto+Sans+Bengali:wght@400;700&display=swap');
 
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+        :root {
+            --neon: #00ff41;
+            --warning: #ffaa00;
+            --danger: #ff003c;
+            --bg-black: #050505;
+            --panel: rgba(10, 25, 10, 0.95);
+        }
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-:root { --neon: #00ff41; --bg: #050505; }
-* { box-sizing: border-box; margin:0; padding:0; }
-body { background: var(--bg); color: var(--neon); font-family: 'Share Tech Mono', monospace; display:flex; flex-direction:column; align-items:center; min-height:100vh; overflow-x:hidden; }
-#loader { position: fixed; inset:0; background:#000; z-index:1000; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
-.loading-bar { width:200px; height:2px; background:#020; margin-top:10px; overflow:hidden; position:relative; }
-.loading-bar::after { content:""; position:absolute; width:50px; height:100%; background:var(--neon); animation:load 1.5s infinite; }
-@keyframes load { 0%{left:-50px;}100%{left:200px;} }
-.logo { font-size:1.5rem; letter-spacing:5px; padding:20px; text-shadow:0 0 10px var(--neon); }
-.scanner-box { position:relative; width:90%; max-width:600px; border:1px solid var(--neon); box-shadow:0 0 20px rgba(0,255,65,0.2); overflow:hidden; margin-top:20px; }
-video { width:100%; display:block; filter:grayscale(100%) brightness(1.2); }
-canvas { position:absolute; top:0; left:0; width:100% !important; height:100% !important; }
-.scan-line { position:absolute; width:100%; height:2px; background:var(--neon); box-shadow:0 0 10px var(--neon); top:0; animation:scan 4s linear infinite; z-index:5; }
-@keyframes scan { 0%{top:0;}100%{top:100%;} }
-.terminal { width:90%; max-width:600px; margin-top:20px; padding:15px; border:1px solid #030; background:rgba(0,20,0,0.4); display:grid; grid-template-columns:1fr; gap:10px; }
-@media (min-width:600px){.terminal{grid-template-columns:1fr 1fr;}}
-.stat-field{border-left:2px solid var(--neon);padding-left:10px;}
-.label{font-size:10px;opacity:0.6;}
-.data{font-size:14px;margin-top:2px;text-transform:uppercase;}
-button{margin-top:15px;padding:8px 12px;background:#010; color:var(--neon); border:1px solid var(--neon); cursor:pointer; text-transform:uppercase; font-size:12px; transition:0.3s;}
-button:hover{background:var(--neon); color:#000;}
-</style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon);
+            font-family: 'Oxanium', 'Noto Sans Bengali', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .hud-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--neon);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, #0a1f0a 0%, transparent 100%);
+        }
+
+        .main-frame {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            flex: 1;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        @media (max-width: 1100px) {
+            .main-frame { grid-template-columns: 1fr; display: block; }
+            .sidebar { margin-bottom: 10px; }
+            .viewport { height: 50vh; margin-bottom: 10px; }
+        }
+
+        .viewport {
+            position: relative;
+            border: 2px solid var(--neon);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
+        }
+        
+        video { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+
+        .controls {
+            position: absolute; bottom: 15px; left: 15px; right: 15px;
+            display: flex; justify-content: space-between; z-index: 20;
+        }
+        .btn-sci {
+            background: rgba(0, 255, 65, 0.2);
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 10px;
+            text-transform: uppercase;
+            backdrop-filter: blur(5px);
+        }
+
+        .sidebar { background: var(--panel); border: 1px solid #1a3a1a; padding: 15px; border-radius: 5px; }
+        .indicator-box { padding: 10px; border: 1px solid #224422; margin-bottom: 8px; background: rgba(0, 20, 0, 0.5); }
+        .label { font-size: 9px; text-transform: uppercase; color: #558855; }
+        .value { font-size: 14px; font-weight: bold; }
+
+        #boot-screen {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+    </style>
 </head>
 <body>
 
-<div id="loader">
-    <div class="logo">MicroMind</div>
-    <div style="font-size:12px;">Human Psychology Analysis System</div>
-    <div class="loading-bar"></div>
+<div id="boot-screen">
+    <h1 style="text-shadow: 0 0 20px var(--neon);">MicroMind</h1>
+    <p id="boot-status">System Intilizing...</p>
 </div>
 
-<div class="logo">MicroMind</div>
+<header class="hud-header">
+    <div style="font-size: 10px;">LATENCY: <span id="lat">12ms</span></div>
+    <div style="font-weight: bold;">MicroMind</div>
+    <div id="clock">00:00:00</div>
+</header>
 
-<div class="scanner-box" id="scanner">
-    <div class="scan-line"></div>
-    <video id="video" autoplay muted playsinline></video>
-</div>
+<main class="main-frame">
+    <aside class="sidebar">
+        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 10px; font-size: 0.8rem;">BIOMETRIC DATA</h3>
+        <div class="indicator-box"><div class="label">Asymmetry</div><div id="val-asymmetry" class="value">0.00</div></div>
+        <div class="indicator-box"><div class="label">Neural Tension</div><div id="val-tension" class="value">LOW</div></div>
+        <div class="indicator-box"><div class="label">Eye Status</div><div id="val-eye" class="value">ANALYZING</div></div>
+    </aside>
 
-<div class="terminal">
-    <div class="stat-field"><div class="label">EMOTION</div><div id="e-val" class="data">...</div></div>
-    <div class="stat-field"><div class="label">CONDITION</div><div id="c-val" class="data">...</div></div>
-    <div class="stat-field"><div class="label">PERSONALITY</div><div id="p-val" class="data">...</div></div>
-    <div class="stat-field"><div class="label">NEURAL SYNC</div><div id="s-val" class="data">0%</div></div>
-    <button onclick="simulateSync()">SYNC NOW</button>
-</div>
+    <section class="viewport" id="main-view">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="controls">
+            <button class="btn-sci" onclick="switchCamera()">Switch Camera</button>
+            <div style="display:flex; gap:5px;">
+                <button class="btn-sci" onclick="adjustZoom(0.2)">+</button>
+                <button class="btn-sci" onclick="adjustZoom(-0.2)">-</button>
+            </div>
+        </div>
+    </section>
+
+    <aside class="sidebar">
+        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 10px; font-size: 0.8rem;">AI VERDICT</h3>
+        <div id="verdict-box" style="font-size: 12px; color: #fff; background: rgba(0,255,65,0.05); padding: 10px; border-left: 2px solid var(--neon);">
+            Waiting for face...
+        </div>
+    </aside>
+</main>
 
 <script>
-const video = document.getElementById('video');
-const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+    const video = document.getElementById('video');
+    const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+    let currentStream = null;
+    let useFrontCamera = true;
+    let currentZoom = 1.0;
+    let canvas = null;
 
-async function bootSystem(){
-    if(typeof faceapi === 'undefined'){ setTimeout(bootSystem,500); return; }
-    await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-    ]);
-    const stream = await navigator.mediaDevices.getUserMedia({video:true});
-    video.srcObject = stream;
-    video.onloadedmetadata = ()=>{
-        document.getElementById('loader').style.display='none';
-        startAnalysis();
-    };
-}
-
-async function startAnalysis(){
-    const canvas = faceapi.createCanvasFromMedia(video);
-    document.getElementById('scanner').append(canvas);
-    const size = {width:video.offsetWidth,height:video.offsetHeight};
-    faceapi.matchDimensions(canvas,size);
-
-    setInterval(async ()=>{
-        const results = await faceapi.detectAllFaces(video,new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
-        const resized = faceapi.resizeResults(results,size);
-        canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
-        faceapi.draw.drawDetections(canvas,resized);
-
-        if(results.length>0){
-            const exp = results[0].expressions;
-            const top = Object.keys(exp).reduce((a,b)=>exp[a]>exp[b]?a:b);
-            updateUI(top,Math.round(exp[top]*100));
+    async function initSystem() {
+        try {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+            ]);
+            startCamera();
+        } catch (e) {
+            document.getElementById('boot-status').innerText = "AI ENGINE ERROR";
         }
-    },200);
-}
+    }
 
-function updateUI(emo,sync){
-    const map = {
-        happy:["Optimal/Stable","Extrovert"],
-        sad:["Low/Reflective","Introspective"],
-        angry:["High/Hostile","Assertive"],
-        neutral:["Logic/Balanced","Analytical"],
-        surprised:["Alert/High","Adaptive"],
-        fearful:["Anxiety/Unsafe","Cautious"],
-        disgusted:["Aversive","Critical"]
-    };
-    const [cond,pers]=map[emo]||["---","---"];
-    document.getElementById('e-val').innerText=emo;
-    document.getElementById('c-val').innerText=cond;
-    document.getElementById('p-val').innerText=pers;
-    document.getElementById('s-val').innerText=sync+"%";
-}
+    async function startCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
 
-function simulateSync(){
-    let val=0;
-    const interval=setInterval(()=>{
-        val+=Math.floor(Math.random()*10+5);
-        if(val>=100){val=100; clearInterval(interval);}
-        document.getElementById('s-val').innerText=val+"%";
-    },150);
-}
+        const constraints = {
+            video: { 
+                facingMode: useFrontCamera ? "user" : "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
 
-window.onload=bootSystem;
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+            video.onloadedmetadata = () => {
+                document.getElementById('boot-screen').style.display = 'none';
+                setupAnalysis();
+            };
+        } catch (err) {
+            alert("Camera Error: " + err.message);
+        }
+    }
+
+    function switchCamera() {
+        useFrontCamera = !useFrontCamera;
+        if (canvas) canvas.remove(); // Remove old canvas on switch
+        startCamera();
+    }
+
+    function adjustZoom(val) {
+        currentZoom = Math.max(1, Math.min(3, currentZoom + val));
+        video.style.transform = `scale(${currentZoom})`;
+    }
+
+    async function setupAnalysis() {
+        canvas = faceapi.createCanvasFromMedia(video);
+        document.getElementById('main-view').append(canvas);
+        const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        setInterval(async () => {
+            if (video.paused || video.ended) return;
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceExpressions();
+
+            const resized = faceapi.resizeResults(detections, displaySize);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (resized.length > 0) {
+                faceapi.draw.drawFaceLandmarks(canvas, resized);
+                analyzeData(resized[0]);
+            }
+        }, 100);
+    }
+
+    function analyzeData(data) {
+        const marks = data.landmarks;
+        const exps = data.expressions;
+        
+        // 10 Psych Points Logic (Same as before)
+        const leftEye = marks.getLeftEye();
+        const rightEye = marks.getRightEye();
+        const asymmetry = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
+        document.getElementById('val-asymmetry').innerText = asymmetry;
+
+        const mouth = marks.getMouth();
+        const lipDist = Math.abs(mouth[14].y - mouth[18].y);
+        document.getElementById('val-tension').innerText = lipDist < 1.8 ? "HIGH" : "NORMAL";
+
+        const top = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
+        document.getElementById('verdict-box').innerText = `আবেগ: ${top.toUpperCase()}. ${lipDist < 1.8 ? "তথ্য গোপনের সম্ভাবনা রয়েছে।" : "স্বাভাবিক আচরণ।"}`;
+    }
+
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+    window.onload = initSystem;
 </script>
 </body>
 </html>
