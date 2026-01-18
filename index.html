@@ -6,95 +6,99 @@
     <title>MicroMind</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --neon: #00ff41;
+            --alert: #ff3e3e;
             --bg: #020502;
-            --panel: rgba(0, 20, 0, 0.8);
-            --border: rgba(0, 255, 65, 0.4);
+            --panel: rgba(0, 30, 0, 0.7);
+            --border: rgba(0, 255, 65, 0.3);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
         body {
             background-color: var(--bg);
             color: var(--neon);
             font-family: 'Rajdhani', 'Noto Sans Bengali', sans-serif;
             height: 100vh;
+            height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* মোবাইল স্ক্রিন লক রাখতে */
+            overflow: hidden;
         }
 
-        /* --- বুট স্ক্রিন (মডেল লোডিং) --- */
+        /* --- Boot Screen --- */
         #boot-screen {
             position: fixed; inset: 0; background: #000; z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.8s ease;
         }
 
-        .loader-box {
-            width: 250px; padding: 20px; border: 1px solid var(--neon);
-            text-align: center; position: relative;
-        }
+        .loader-box { width: 85%; max-width: 350px; text-align: center; border: 1px solid var(--neon); padding: 30px; position: relative; }
+        .progress-bar { height: 4px; background: #111; margin: 20px 0; overflow: hidden; }
+        #load-fill { width: 0%; height: 100%; background: var(--neon); transition: 0.3s; box-shadow: 0 0 10px var(--neon); }
 
-        .progress-container {
-            width: 100%; height: 5px; background: #111; margin: 15px 0;
-            border-radius: 10px; overflow: hidden;
-        }
-
-        #load-bar { width: 0%; height: 100%; background: var(--neon); transition: 0.3s; }
-
-        /* --- মেইন লেআউট --- */
+        /* --- Layout --- */
         .hud-header {
-            padding: 10px 15px; background: #000; border-bottom: 1px solid var(--border);
+            padding: 15px; border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
-            font-family: 'Orbitron'; font-size: 10px;
+            background: rgba(0,0,0,0.9); font-family: 'Orbitron'; font-size: 10px;
         }
 
-        .main-grid {
-            flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px;
-            overflow-y: auto;
+        .main-container {
+            flex: 1; display: grid; grid-template-columns: 1fr;
+            padding: 10px; gap: 10px; overflow-y: auto;
+            scrollbar-width: none;
         }
 
         @media (min-width: 1024px) {
-            .main-grid { display: grid; grid-template-columns: 280px 1fr 280px; }
+            .main-container { grid-template-columns: 320px 1fr 320px; align-items: start; }
         }
 
-        /* --- ভিডিও ফ্রেম (পারফেক্ট রেসপন্সিভ) --- */
-        .viewport-container {
+        /* --- Video & Canvas --- */
+        .viewport-wrapper {
             position: relative; width: 100%; aspect-ratio: 4/3;
-            background: #000; border: 1px solid var(--neon);
-            border-radius: 8px; overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,255,65,0.1);
+            border: 1px solid var(--neon); border-radius: 4px; overflow: hidden;
+            background: #000;
         }
 
-        @media (min-width: 1024px) { .viewport-container { aspect-ratio: 16/9; } }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .mirrored-off { transform: scaleX(1); }
+        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; pointer-events: none; }
 
-        video { width: 100%; height: 100%; object-fit: cover; }
-        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
-
-        /* --- সাইড কার্ডস --- */
-        .card {
+        /* --- UI Elements --- */
+        .data-card {
             background: var(--panel); border: 1px solid var(--border);
-            padding: 12px; border-radius: 4px; margin-bottom: 10px;
+            padding: 12px; margin-bottom: 10px; backdrop-filter: blur(5px);
         }
 
-        .card-header { font-size: 11px; font-family: 'Orbitron'; margin-bottom: 10px; opacity: 0.7; }
+        .card-title { font-size: 11px; font-family: 'Orbitron'; opacity: 0.7; margin-bottom: 8px; color: var(--neon); }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .stat-val { font-weight: bold; color: #fff; font-size: 1.1rem; }
 
-        .stat-val { font-size: 18px; font-weight: bold; color: #fff; }
+        .ai-verdict-box {
+            background: rgba(0, 255, 65, 0.05); border-left: 3px solid var(--neon);
+            padding: 15px; min-height: 80px; font-size: 14px; line-height: 1.5; color: #eee;
+        }
 
-        /* --- কন্ট্রোলস --- */
-        .controls { display: flex; gap: 10px; margin-top: 5px; }
-        .btn {
+        .action-bar { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-neon {
             flex: 1; background: transparent; border: 1px solid var(--neon);
-            color: var(--neon); padding: 10px; font-family: 'Orbitron';
-            font-size: 9px; cursor: pointer; border-radius: 4px;
+            color: var(--neon); padding: 12px; font-family: 'Orbitron';
+            font-size: 11px; cursor: pointer; transition: 0.3s;
         }
-        .btn:active { background: var(--neon); color: #000; }
+        .btn-neon:hover { background: rgba(0, 255, 65, 0.1); }
+        .btn-neon:active { background: var(--neon); color: #000; }
+
+        /* --- Scanner Line --- */
+        .scanner-line {
+            position: absolute; width: 100%; height: 2px; background: var(--neon);
+            top: 0; left: 0; box-shadow: 0 0 15px var(--neon);
+            animation: scan 4s linear infinite; z-index: 5; opacity: 0.5;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
 
     </style>
 </head>
@@ -102,175 +106,223 @@
 
 <div id="boot-screen">
     <div class="loader-box">
-    	<h1 style="font-family: 'Orbitron'; font-size: 15px; margin-bottom: 10px;">MicroMind</h1>
-        <h2 style="font-family: 'Orbitron'; font-size: 8px; margin-bottom: 10px;">Intilizing System</h2>
-        <div id="status-text" style="font-size: 10px; margin-bottom: 5px;">0%</div>
-        <div class="progress-container"><div id="load-bar"></div></div>
-        <p style="font-size: 9px; opacity: 0.5;">DO NOT CLOSE THE BROWSER</p>
+        <div style="font-family: 'Orbitron'; font-size: 20px; letter-spacing: 2px;">MicroMind</div>
+        <div id="boot-status" style="font-size: 9px; margin-top: 10px; opacity: 0.6;">INITIALIZING CORE...</div>
+        <div class="progress-bar"><div id="load-fill"></div></div>
     </div>
 </div>
 
 <header class="hud-header">
-    <div>SYSTEM: Ready</div>
-    <div style="font-size: 16px; letter-spacing: 2px;">MicroMind</div>
+    <div id="sys-status">● SYSTEM: Active</div>
+    <div style="font-size: 16px; color: #fff; letter-spacing: 3px;">MicroMind</div>
     <div id="clock">00:00:00</div>
 </header>
 
-<main class="main-grid">
-    <aside>
-        <div class="card">
-            <div class="card-header">BIOMETRIC ASYMMETRY</div>
-            <div id="asym-val" class="stat-val">0.00</div>
+<main class="main-container">
+    <aside class="left-panel">
+        <div class="data-card">
+            <div class="card-title">FACIAL ASYMMETRY</div>
+            <div class="stat-row"><span>Index:</span> <span id="asym-index" class="stat-val">0.00</span></div>
+            <div style="font-size: 10px; opacity: 0.5;">*Asymmetry suggests cognitive load.</div>
         </div>
-        <div class="card">
-            <div class="card-header">PRIMARY EMOTION</div>
-            <div id="emo-val" class="stat-val" style="color: var(--neon);">WAITING...</div>
+        <div class="data-card">
+            <div class="card-title">BLINK RATE</div>
+            <div id="blink-status" class="stat-val" style="color: var(--neon);">MONITORING...</div>
+        </div>
+        <div class="data-card">
+            <div class="card-title">PUPIL ANALYSIS</div>
+            <div id="pupil-val" class="stat-val">STABLE</div>
         </div>
     </aside>
 
-    <section>
-        <div class="viewport-container" id="video-box">
+    <section class="center-panel">
+        <div class="viewport-wrapper" id="vp-container">
+            <div class="scanner-line"></div>
             <video id="video" autoplay muted playsinline></video>
         </div>
-        <div class="controls">
-            <button class="btn" onclick="switchCam()">SWITCH CAMERA</button>
-            <button class="btn" onclick="location.reload()">RELOAD AI</button>
+        <div class="action-bar">
+            <button class="btn-neon" onclick="switchCam()">Switch Camera</button>
+            <button class="btn-neon" onclick="location.reload()">Reset System</button>
         </div>
     </section>
 
-    <aside>
-        <div class="card" style="min-height: 120px;">
-            <div class="card-header">AI VERDICT</div>
-            <div id="verdict-txt" style="font-size: 14px; line-height: 1.5; color: #fff;">
-                ক্যামেরা ফিড অ্যানালাইজ করা হচ্ছে...
-            </div>
+    <aside class="right-panel">
+        <div class="data-card">
+            <div class="card-title">DOMINANT EMOTION</div>
+            <div id="main-emotion" style="font-size: 22px; font-weight: bold; color: var(--neon); font-family: 'Orbitron';">...</div>
+        </div>
+        <div class="ai-verdict-box" id="ai-verdict">
+            স্ক্যানিং শুরু করুন...
+        </div>
+        <div class="data-card" style="margin-top: 10px; border-color: var(--alert);">
+            <div class="card-title" style="color: var(--alert);">DECEPTION PROBABILITY</div>
+            <div id="lie-meter" style="font-size: 24px; font-weight: bold; color: var(--alert); font-family: 'Orbitron';">0%</div>
         </div>
     </aside>
 </main>
 
 <script>
     const video = document.getElementById('video');
-    const loadBar = document.getElementById('load-bar');
-    const statusText = document.getElementById('status-text');
+    const loadFill = document.getElementById('load-fill');
+    const statusText = document.getElementById('boot-status');
     const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
     
     let useFrontCamera = true;
     let canvas = null;
+    let currentStream = null;
 
-    // ১. প্রফেশনাল মডেল লোডার (প্রগ্রেস বার সহ)
-    async function loadAISystems() {
+    async function init() {
         try {
-            const models = [
-                { name: 'Face Detector', load: faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL) },
-                { name: 'Face Landmarks', load: faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL) },
-                { name: 'Expression Engine', load: faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) }
-            ];
-
-            for(let i=0; i < models.length; i++) {
-                await models[i].load;
-                let percent = Math.round(((i + 1) / models.length) * 100);
-                loadBar.style.width = percent + '%';
-                statusText.innerText = `LOADING ${models[i].name}... ${percent}%`;
-            }
-
-            startVideo();
-        } catch (err) {
-            statusText.innerText = "ERROR: INTERNET CONNECTION FAILED";
-            console.error(err);
+            statusText.innerText = "LOADING NEURAL NETWORKS (30%)...";
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+            loadFill.style.width = "30%";
+            
+            statusText.innerText = "MAPPING LANDMARKS (60%)...";
+            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+            loadFill.style.width = "60%";
+            
+            statusText.innerText = "CALIBRATING EMOTIONS (100%)...";
+            await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+            loadFill.style.width = "100%";
+            
+            setTimeout(startCamera, 500);
+        } catch (e) {
+            statusText.innerText = "HARDWARE ERROR: AI FAILED TO LOAD";
+            console.error(e);
         }
     }
 
-    // ২. ভিডিও স্টার্ট (Error Handling সহ)
-    async function startVideo() {
-        if (video.srcObject) {
-            video.srcObject.getTracks().forEach(track => track.stop());
+    async function startCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
         }
 
-        const constraints = {
-            video: { 
-                facingMode: useFrontCamera ? "user" : "environment",
-                width: { ideal: 640 },
-                height: { ideal: 480 }
-            }
-        };
-
         try {
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    facingMode: useFrontCamera ? "user" : "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+            
+            currentStream = stream;
             video.srcObject = stream;
+            
+            // Mirror flip for front camera
+            video.classList.toggle('mirrored-off', !useFrontCamera);
+
             video.onloadedmetadata = () => {
                 document.getElementById('boot-screen').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('boot-screen').style.display = 'none';
-                    initAnalysis();
-                }, 800);
+                setTimeout(() => document.getElementById('boot-screen').style.display = 'none', 500);
+                startAnalysis();
             };
         } catch (err) {
-            alert("ক্যামেরা শুরু করা যাচ্ছে না। দয়া করে নিশ্চিত করুন অন্য কোনো অ্যাপ ক্যামেরা ব্যবহার করছে না।");
+            alert("Camera Access Denied!");
         }
     }
 
-    // ৩. রেসপন্সিভ ক্যানভাস এবং অ্যানালাইসিস
-    async function initAnalysis() {
-        if(canvas) canvas.remove();
-        
-        canvas = faceapi.createCanvasFromMedia(video);
-        document.getElementById('video-box').append(canvas);
+    async function startAnalysis() {
+        // Create canvas once to avoid memory leaks
+        if(!canvas) {
+            canvas = faceapi.createCanvasFromMedia(video);
+            document.getElementById('vp-container').append(canvas);
+        }
         
         const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
         faceapi.matchDimensions(canvas, displaySize);
 
         setInterval(async () => {
-            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+            if (video.paused || video.ended) return;
+
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
                 .withFaceLandmarks()
                 .withFaceExpressions();
 
-            const resizedResults = faceapi.resizeResults(detections, displaySize);
+            const resized = faceapi.resizeResults(detections, displaySize);
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (resizedResults.length > 0) {
-                // কাস্টম বক্স ড্র
-                resizedResults.forEach(det => {
-                    const box = det.detection.box;
-                    ctx.strokeStyle = '#00ff41';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(box.x, box.y, box.width, box.height);
-                });
-                updateBiometrics(resizedResults[0]);
+            if (resized.length > 0) {
+                const face = resized[0];
+                drawHUD(ctx, face);
+                analyzePsychology(face);
             }
-        }, 150); // স্মুথ ফাস্ট আপডেট
+        }, 150);
     }
 
-    function updateBiometrics(data) {
+    function drawHUD(ctx, face) {
+        const { box } = face.detection;
+        ctx.strokeStyle = '#00ff41';
+        ctx.lineWidth = 2;
+        
+        // Custom UI Corners
+        const len = 20;
+        ctx.beginPath();
+        // Top Left
+        ctx.moveTo(box.x, box.y + len); ctx.lineTo(box.x, box.y); ctx.lineTo(box.x + len, box.y);
+        // Top Right
+        ctx.moveTo(box.right - len, box.y); ctx.lineTo(box.right, box.y); ctx.lineTo(box.right, box.y + len);
+        // Bottom Left
+        ctx.moveTo(box.x, box.bottom - len); ctx.lineTo(box.x, box.bottom); ctx.lineTo(box.x + len, box.bottom);
+        // Bottom Right
+        ctx.moveTo(box.right - len, box.bottom); ctx.lineTo(box.right, box.bottom); ctx.lineTo(box.right, box.bottom - len);
+        ctx.stroke();
+
+        // Landmarks
+        faceapi.draw.drawFaceLandmarks(canvas, face);
+    }
+
+    function analyzePsychology(data) {
         const exps = data.expressions;
         const topExp = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
-        
-        // Asymmetry
-        const marks = data.landmarks.getLeftEye();
-        const asym = Math.abs(marks[0].y - marks[3].y).toFixed(2);
-        
-        document.getElementById('asym-val').innerText = asym;
-        document.getElementById('emo-val').innerText = topExp.toUpperCase();
+        const landmarks = data.landmarks;
 
-        const messages = {
-            happy: "আপনার মানসিক অবস্থা ইতিবাচক। ব্রেইন ফাংশন শান্ত আছে।",
-            neutral: "আপনি স্থির অবস্থায় আছেন। কোনো স্ট্রেস নেই।",
-            sad: "আপনাকে কিছুটা বিমর্ষ মনে হচ্ছে। পর্যাপ্ত বিশ্রাম প্রয়োজন।",
-            angry: "টেনশন বা রাগের লক্ষণ পাওয়া গেছে। শান্ত হওয়ার চেষ্টা করুন।"
-        };
-        document.getElementById('verdict-txt').innerText = messages[topExp] || "আবেগ বিশ্লেষণ করা হচ্ছে...";
+        // 1. Asymmetry Index
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        const asym = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
+        document.getElementById('asym-index').innerText = asym;
+
+        // 2. Emotion Text Update
+        document.getElementById('main-emotion').innerText = topExp.toUpperCase();
+
+        // 3. Verdict Logic (Original)
+        let verdict = "";
+        let lieProb = 0;
+
+        if (topExp === 'happy' && exps.happy > 0.8) {
+            verdict = "আপনার হাসি স্বাভাবিক এবং ইতিবাচক (Duchenne Smile এর সম্ভাবনা বেশি)।";
+            lieProb = 5;
+        } else if (topExp === 'neutral' && asym > 5) {
+            verdict = "আপনার মুখে এক ধরণের 'কগনিটিভ ডিসোনেন্স' বা মানসিক দ্বন্দ্বের ছাপ লক্ষ্য করা যাচ্ছে।";
+            lieProb = 45;
+        } else if (topExp === 'sad' || topExp === 'fearful') {
+            verdict = "আপনি সম্ভবত নেতিবাচক আবেগ দমন করার চেষ্টা করছেন।";
+            lieProb = 30;
+        } else if (asym > 8) {
+            verdict = "মুখের দুই অংশের অমিল পাওয়া গেছে। এটি কোনো সত্য আবেগ লুকানোর 'মাইক্রো-এক্সপ্রেশন' হতে পারে।";
+            lieProb = 75;
+        } else {
+            verdict = "সিস্টেম তথ্য বিশ্লেষণ করছে... আপনার বর্তমান শারীরিক অবস্থা স্থিতিশীল।";
+            lieProb = 10;
+        }
+
+        document.getElementById('ai-verdict').innerText = verdict;
+        document.getElementById('lie-meter').innerText = lieProb + "%";
     }
 
     function switchCam() {
         useFrontCamera = !useFrontCamera;
-        startVideo();
+        startCamera();
     }
 
-    // টাইম এবং রিসাইজ হ্যান্ডলিং
-    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-GB'); }, 1000);
-    window.addEventListener('resize', () => initAnalysis());
-    window.onload = loadAISystems;
+    setInterval(() => {
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+    }, 1000);
 
+    window.onload = init;
 </script>
+
 </body>
 </html>
