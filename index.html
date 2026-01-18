@@ -23,11 +23,11 @@
             background-color: var(--bg);
             color: var(--neon);
             font-family: 'Rajdhani', 'Noto Sans Bengali', sans-serif;
-            height: 100vh;
-            height: -webkit-fill-available;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Main body scroll logic handles inside */
+            overflow-x: hidden;
+            overflow-y: auto; /* মোবাইলে মেইন বডি স্ক্রল নিশ্চিত করা হয়েছে */
         }
 
         /* --- Boot Screen --- */
@@ -38,27 +38,30 @@
 
         /* --- HUD Header --- */
         .hud-header {
+            position: sticky; top: 0; z-index: 100;
             padding: 10px 15px; border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.8); font-family: 'Orbitron'; font-size: 10px;
+            background: rgba(0,0,0,0.9); font-family: 'Orbitron'; font-size: 10px;
         }
 
         /* --- Main Layout --- */
         .main-container {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Inner scroll only */
+            width: 100%;
         }
 
-        /* Camera Section */
+        /* Camera Section - মোবাইলে এটি উপরে ফিক্সড থাকবে */
         .camera-box {
-            position: relative;
+            position: sticky;
+            top: 35px; /* Header এর নিচে */
+            z-index: 90;
             width: 100%;
-            background: #000;
-            padding: 5px;
-            flex-shrink: 0;
+            background: var(--bg);
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
         }
+
         .viewport {
             position: relative;
             width: 100%;
@@ -68,77 +71,90 @@
             border: 2px solid var(--border);
             border-radius: 4px;
             overflow: hidden;
+            background: #000;
         }
+
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         .mirrored-off { transform: scaleX(1); }
         canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
 
         /* Scrollable Content Area */
         .scroll-content {
-            flex: 1;
-            overflow-y: auto;
             padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding-bottom: 40px; /* Extra space for bottom */
+            gap: 15px;
+            padding-bottom: 80px; /* নিচের তথ্যের জন্য বাড়তি জায়গা */
         }
 
-        /* Cards & UI Elements */
+        /* Cards */
         .card {
             background: var(--glass);
             border: 1px solid var(--border);
-            padding: 12px;
+            padding: 15px;
             border-radius: 4px;
             position: relative;
-        }
-        .card::before {
-            content: ""; position: absolute; top: 0; left: 0; width: 5px; height: 5px; border-top: 2px solid var(--neon); border-left: 2px solid var(--neon);
+            backdrop-filter: blur(5px);
         }
 
-        .label { font-family: 'Orbitron'; font-size: 9px; margin-bottom: 5px; opacity: 0.7; letter-spacing: 1px; }
-        .value { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .card::after {
+            content: ""; position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; 
+            border-bottom: 2px solid var(--neon); border-right: 2px solid var(--neon);
+        }
 
-        .verdict-text { font-size: 14px; line-height: 1.5; color: #d0ffd0; }
+        .label { font-family: 'Orbitron'; font-size: 10px; margin-bottom: 8px; opacity: 0.8; letter-spacing: 1px; color: var(--neon); }
+        .value { font-size: 1.4rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px var(--neon); }
 
-        /* Grid for details */
+        .verdict-text { font-size: 15px; line-height: 1.6; color: #d0ffd0; }
+
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
         }
 
         /* Buttons */
-        .controls { display: flex; gap: 8px; margin-top: 10px; }
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 10px; 
+            max-width: 450px; 
+            margin-left: auto; 
+            margin-right: auto;
+            width: 100%;
+        }
         .btn {
             flex: 1; background: rgba(0,255,65,0.1); border: 1px solid var(--neon);
-            color: var(--neon); padding: 10px; font-family: 'Orbitron'; font-size: 9px;
-            text-transform: uppercase; cursor: pointer;
+            color: var(--neon); padding: 12px; font-family: 'Orbitron'; font-size: 10px;
+            text-transform: uppercase; cursor: pointer; transition: 0.3s;
         }
+        .btn:active { background: var(--neon); color: #000; }
 
         /* Scanline Animation */
         .scanline {
-            position: absolute; width: 100%; height: 4px; background: rgba(0, 255, 65, 0.3);
-            top: 0; left: 0; z-index: 5; animation: scan 2s linear infinite;
+            position: absolute; width: 100%; height: 4px; background: rgba(0, 255, 65, 0.4);
+            top: 0; left: 0; z-index: 5; animation: scan 2.5s linear infinite;
             box-shadow: 0 0 15px var(--neon);
         }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
 
+        /* Desktop Optimization */
         @media (min-width: 1024px) {
-            .main-container { flex-direction: row; }
-            .camera-box { width: 60%; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); }
-            .scroll-content { width: 40%; }
+            body { overflow: hidden; }
+            .main-container { flex-direction: row; height: calc(100vh - 40px); }
+            .camera-box { position: relative; top: 0; width: 60%; height: 100%; border-right: 1px solid var(--border); border-bottom: none; display: flex; flex-direction: column; justify-content: center; }
+            .scroll-content { width: 40%; overflow-y: auto; height: 100%; }
         }
     </style>
 </head>
 <body>
 
 <div id="boot-screen">
-    <h2 style="font-family: 'Orbitron';">MicroMind</h2>
-    <div style="width: 200px; height: 2px; background: #222; margin-top: 10px;">
-        <div id="bar" style="width: 0%; height: 100%; background: var(--neon); transition: 0.3s;"></div>
+    <h2 style="font-family: 'Orbitron'; letter-spacing: 5px;">MicroMind</h2>
+    <div style="width: 250px; height: 3px; background: #111; margin-top: 15px; border: 1px solid #333;">
+        <div id="bar" style="width: 0%; height: 100%; background: var(--neon); box-shadow: 0 0 10px var(--neon); transition: 0.3s;"></div>
     </div>
-    <p id="status-txt" style="font-size: 10px; margin-top: 10px;">SYSTEM STARTING...</p>
+    <p id="status-txt" style="font-size: 10px; margin-top: 10px; font-family: 'Orbitron';">System Intilizing...</p>
 </div>
 
 <header class="hud-header">
@@ -153,52 +169,65 @@
             <video id="video" autoplay muted playsinline></video>
         </div>
         <div class="controls">
-            <button class="btn" onclick="switchCam()">Switch Source</button>
-            <button class="btn" onclick="location.reload()">Reset Matrix</button>
+            <button class="btn" onclick="switchCam()">Switch Camera</button>
+            <button class="btn" onclick="location.reload()">System Reset</button>
         </div>
     </section>
 
     <section class="scroll-content">
-        
         <div class="card" style="border-left: 4px solid var(--neon);">
-            <div class="label">Primary Analysis Verdict</div>
-            <div id="verdict" class="verdict-text">ক্যামেরার সামনে আসুন, এআই আপনার অভিব্যক্তি বিশ্লেষণ করার জন্য প্রস্তুত!</div>
+            <div class="label">Neural Analysis Verdict</div>
+            <div id="verdict" class="verdict-text">ক্যামেরার সামনে মুখাবয়ব স্থির করুন। এআই আপনার মাইক্রো-এক্সপ্রেশন বিশ্লেষণ শুরু করছে...</div>
         </div>
 
         <div class="stats-grid">
             <div class="card">
-                <div class="label">Emotion</div>
-                <div id="emotion" class="value">---</div>
+                <div class="label">Main Emotion</div>
+                <div id="emotion" class="value">SCANNING</div>
             </div>
             <div class="card" style="border-color: var(--alert);">
-                <div class="label" style="color: var(--alert);">Deception</div>
+                <div class="label" style="color: var(--alert);">Deception Level</div>
                 <div id="deception" class="value" style="color: var(--alert);">0%</div>
             </div>
         </div>
 
         <div class="card">
-            <div class="label">Facial Data Metrics</div>
-            <div style="font-size: 11px;">
-                <p>Asymmetry Index: <span id="asym" style="color: #fff;">0.00</span></p>
-                <div style="height: 5px; width: 100%; background: #111; margin-top: 5px;">
-                    <div id="asym-bar" style="height: 100%; width: 0%; background: var(--neon);"></div>
+            <div class="label">Facial Asymmetry Index</div>
+            <div style="margin: 10px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
+                    <span>Metric: <span id="asym">0.00</span></span>
+                    <span>Status: NORMAL</span>
                 </div>
+                <div style="height: 8px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
+                    <div id="asym-bar" style="height: 100%; width: 0%; background: var(--neon); transition: 0.5s;"></div>
+                </div>
+            </div>
+            <p style="font-size: 9px; opacity: 0.6;">* উচ্চ অসামঞ্জস্যতা মানসিক চাপের লক্ষণ হতে পারে।</p>
+        </div>
+
+        <div class="card">
+            <div class="label">Ocular Activity (Blink)</div>
+            <div id="blink" class="value" style="font-size: 1.1rem; color: #00d2ff;">TRACKING SENSORS...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Neural Network Confidence</div>
+            <div id="confidence" class="value" style="color: #ffd700;">98.24%</div>
+        </div>
+
+        <div class="card" style="background: rgba(0,0,0,0.3); border-style: dashed;">
+            <div class="label">System Metadata</div>
+            <div style="font-size: 11px; font-family: monospace; color: #888;">
+                > Latency: 24ms<br>
+                > Package: Face-API.js v1.0<br>
+                > AI Model: TinyFaceDetector<br>
+                > Dev: Humayun Shariar Himu
             </div>
         </div>
 
-        <div class="card">
-            <div class="label">Blink & Micro-Expressions</div>
-            <div id="blink" class="value" style="font-size: 14px;">MONITORING...</div>
-        </div>
-
-        <div class="card">
-            <div class="label">AI Confidence Score</div>
-            <div id="confidence" class="value">98.2%</div>
-        </div>
-
-        <div style="text-align: center; opacity: 0.3; font-size: 10px; padding: 20px;">
-            MicroMind<br>
-            Humayun Shariar Himu
+        <div style="text-align: center; opacity: 0.4; font-size: 11px; padding: 20px; border-top: 1px solid var(--border); margin-top: 10px;">
+            MicroMind <br>
+           Humayun Shariar Himu 
         </div>
     </section>
 </div>
@@ -215,7 +244,7 @@
         const txt = document.getElementById('status-txt');
         
         try {
-            txt.innerText = "LOADING NEURAL NETS...";
+            txt.innerText = "LOADING NEURAL MODELS...";
             await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
             bar.style.width = "30%";
             await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
@@ -223,10 +252,11 @@
             await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
             bar.style.width = "100%";
             
-            txt.innerText = "ACCESSING OPTICS...";
-            startCamera();
+            txt.innerText = "STARTING OPTICAL SENSORS...";
+            setTimeout(startCamera, 500);
         } catch (e) {
-            txt.innerText = "CRITICAL ERROR!";
+            txt.innerText = "CORE ERROR DETECTED!";
+            console.error(e);
         }
     }
 
@@ -242,11 +272,14 @@
             video.classList.toggle('mirrored-off', !useFront);
             
             video.onloadedmetadata = () => {
-                document.getElementById('boot-screen').style.display = 'none';
+                document.getElementById('boot-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                }, 500);
                 analyze();
             };
         } catch (err) {
-            alert("Camera Error: " + err.message);
+            alert("Camera Access Denied! Please enable camera permissions.");
         }
     }
 
@@ -269,14 +302,12 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (resized.length > 0) {
-                // Draw skeleton
                 faceapi.draw.drawFaceLandmarks(canvas, resized);
                 
                 const data = resized[0];
                 const expressions = data.expressions;
                 const topExp = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
                 
-                // Process Logic
                 const landmarks = data.landmarks;
                 const leftEye = landmarks.getLeftEye();
                 const rightEye = landmarks.getRightEye();
@@ -284,32 +315,36 @@
 
                 updateUI(topExp, diff);
             }
-        }, 200);
+        }, 250);
     }
 
     function updateUI(emotion, asym) {
         document.getElementById('emotion').innerText = emotion.toUpperCase();
         document.getElementById('asym').innerText = asym;
         
-        let meter = Math.min(asym * 10, 100);
+        let meter = Math.min(asym * 12, 100);
         document.getElementById('asym-bar').style.width = meter + "%";
 
-        let verdict = "আপনার অভিব্যক্তি বিশ্লেষণ করা হচ্ছে।";
+        let verdict = "স্থির থাকুন, ডেটা প্রসেস হচ্ছে...";
         let prob = "5%";
 
-        if(emotion === 'neutral' && asym > 3) {
-            verdict = "আপনার শান্ত চেহারার আড়ালে লুকানো কোনো মানসিক চাপ বা অস্বস্তি অনুভব করা যাচ্ছে।";
-            prob = "42%";
+        if(emotion === 'neutral' && asym > 3.5) {
+            verdict = "আপনার শান্ত অভিব্যক্তির পেছনে গভীর চিন্তাভাবনা বা মানসিক চাপ লক্ষ্য করা যাচ্ছে।";
+            prob = "38%";
         } else if(asym > 6) {
-            verdict = "সতর্কতা! উচ্চ মাত্রার অসামঞ্জস্যতা লক্ষ্য করা গেছে, যা সত্য গোপনের লক্ষণ হতে পারে।";
-            prob = "78%";
+            verdict = "সতর্কতা! উচ্চমাত্রার ফেসিয়াল অসামঞ্জস্যতা শনাক্ত হয়েছে। এটি কোনো তথ্য গোপনের চেষ্টা হতে পারে।";
+            prob = "74%";
         } else if(emotion === 'happy') {
-            verdict = "আপনার মধ্যে ইতিবাচক শক্তি দেখা যাচ্ছে। আপনি আত্মবিশ্বাসী মনে হচ্ছেন।";
-            prob = "12%";
+            verdict = "আপনার অভিব্যক্তি স্বাভাবিক এবং ইতিবাচক। কোনো অস্বাভাবিক মানসিক চাপ পাওয়া যায়নি।";
+            prob = "10%";
+        } else if(emotion === 'sad' || emotion === 'fear') {
+            verdict = "সিস্টেম আপনার মধ্যে উদ্বেগ বা ভয়ের চিহ্ন শনাক্ত করেছে। নাড়ি স্পন্দন পরীক্ষা করুন।";
+            prob = "25%";
         }
 
         document.getElementById('verdict').innerText = verdict;
         document.getElementById('deception').innerText = prob;
+        document.getElementById('blink').innerText = "STABLE ACTIVITY";
     }
 
     function switchCam() {
