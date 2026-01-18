@@ -2,266 +2,275 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MicroMind</title>
     
-    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;600&family=Noto+Sans+Bengali:wght@400;700&display=swap');
-
         :root {
             --neon: #00ff41;
-            --warning: #ffaa00;
-            --danger: #ff003c;
-            --bg-black: #050505;
-            --panel: rgba(10, 25, 10, 0.95);
+            --bg: #020502;
+            --panel: rgba(0, 20, 0, 0.8);
+            --border: rgba(0, 255, 65, 0.4);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
-            background-color: var(--bg-black);
+            background-color: var(--bg);
             color: var(--neon);
-            font-family: 'Oxanium', 'Noto Sans Bengali', sans-serif;
-            min-height: 100vh;
+            font-family: 'Rajdhani', 'Noto Sans Bengali', sans-serif;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
-            overflow-y: auto; /* স্ক্রল সচল নিশ্চিত করা হলো */
+            overflow: hidden; /* মোবাইল স্ক্রিন লক রাখতে */
         }
 
-        .hud-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--neon);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(180deg, #0a1f0a 0%, transparent 100%);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-
-        .main-frame {
-            display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            flex: 1;
-            gap: 15px;
-            padding: 15px;
-            width: 100%;
-        }
-
-        /* মোবাইল রেসপন্সিভনেস আপডেট */
-        @media (max-width: 1100px) {
-            .main-frame { 
-                display: flex; 
-                flex-direction: column; 
-                padding: 10px;
-            }
-            .viewport { 
-                height: 50vh; 
-                min-height: 300px;
-                order: -1; /* ভিডিও বক্স সবার উপরে থাকবে */
-            }
-            .sidebar {
-                width: 100%;
-            }
-        }
-
-        .viewport {
-            position: relative;
-            border: 2px solid var(--neon);
-            border-radius: 10px;
-            overflow: hidden;
-            background: #000;
-            box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
-        }
-        
-        video { width: 100%; height: 100%; object-fit: cover; }
-        canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
-
-        .controls {
-            position: absolute; bottom: 15px; left: 15px; right: 15px;
-            display: flex; justify-content: space-between; z-index: 20;
-        }
-        .btn-sci {
-            background: rgba(0, 255, 65, 0.2);
-            border: 1px solid var(--neon);
-            color: var(--neon);
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 10px;
-            text-transform: uppercase;
-            backdrop-filter: blur(5px);
-            border-radius: 4px;
-        }
-
-        .sidebar { background: var(--panel); border: 1px solid #1a3a1a; padding: 15px; border-radius: 5px; height: fit-content; }
-        .indicator-box { padding: 12px; border: 1px solid #224422; margin-bottom: 10px; background: rgba(0, 20, 0, 0.5); }
-        .label { font-size: 10px; text-transform: uppercase; color: #558855; margin-bottom: 4px; }
-        .value { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-
+        /* --- বুট স্ক্রিন (মডেল লোডিং) --- */
         #boot-screen {
-            position: fixed; inset: 0; background: #000; z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease;
         }
 
-        /* ফুটার স্টাইল */
-        .hud-footer {
-            padding: 10px;
-            text-align: center;
-            font-size: 11px;
-            border-top: 1px solid rgba(0, 255, 65, 0.3);
-            background: rgba(0, 10, 0, 0.8);
-            letter-spacing: 1px;
-            color: #558855;
+        .loader-box {
+            width: 250px; padding: 20px; border: 1px solid var(--neon);
+            text-align: center; position: relative;
         }
-        .credit { color: var(--neon); font-weight: bold; }
+
+        .progress-container {
+            width: 100%; height: 5px; background: #111; margin: 15px 0;
+            border-radius: 10px; overflow: hidden;
+        }
+
+        #load-bar { width: 0%; height: 100%; background: var(--neon); transition: 0.3s; }
+
+        /* --- মেইন লেআউট --- */
+        .hud-header {
+            padding: 10px 15px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: 'Orbitron'; font-size: 10px;
+        }
+
+        .main-grid {
+            flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 1024px) {
+            .main-grid { display: grid; grid-template-columns: 280px 1fr 280px; }
+        }
+
+        /* --- ভিডিও ফ্রেম (পারফেক্ট রেসপন্সিভ) --- */
+        .viewport-container {
+            position: relative; width: 100%; aspect-ratio: 4/3;
+            background: #000; border: 1px solid var(--neon);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,255,65,0.1);
+        }
+
+        @media (min-width: 1024px) { .viewport-container { aspect-ratio: 16/9; } }
+
+        video { width: 100%; height: 100%; object-fit: cover; }
+        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+
+        /* --- সাইড কার্ডস --- */
+        .card {
+            background: var(--panel); border: 1px solid var(--border);
+            padding: 12px; border-radius: 4px; margin-bottom: 10px;
+        }
+
+        .card-header { font-size: 11px; font-family: 'Orbitron'; margin-bottom: 10px; opacity: 0.7; }
+
+        .stat-val { font-size: 18px; font-weight: bold; color: #fff; }
+
+        /* --- কন্ট্রোলস --- */
+        .controls { display: flex; gap: 10px; margin-top: 5px; }
+        .btn {
+            flex: 1; background: transparent; border: 1px solid var(--neon);
+            color: var(--neon); padding: 10px; font-family: 'Orbitron';
+            font-size: 9px; cursor: pointer; border-radius: 4px;
+        }
+        .btn:active { background: var(--neon); color: #000; }
+
     </style>
 </head>
 <body>
 
 <div id="boot-screen">
-    <h1 style="text-shadow: 0 0 20px var(--neon); margin-bottom: 10px;">MicroMind</h1>
-    <p id="boot-status">Initializing Neural Networks...</p>
+    <div class="loader-box">
+    	<h1 style="font-family: 'Orbitron'; font-size: 15px; margin-bottom: 10px;">MicroMind</h1>
+        <h2 style="font-family: 'Orbitron'; font-size: 8px; margin-bottom: 10px;">Intilizing System</h2>
+        <div id="status-text" style="font-size: 10px; margin-bottom: 5px;">0%</div>
+        <div class="progress-container"><div id="load-bar"></div></div>
+        <p style="font-size: 9px; opacity: 0.5;">DO NOT CLOSE THE BROWSER</p>
+    </div>
 </div>
 
 <header class="hud-header">
-    <div style="font-size: 10px;">STATUS: <span id="sys-status" style="color:var(--neon)">ONLINE</span></div>
-    <div style="font-weight: bold; letter-spacing: 2px;">MicroMind</div>
+    <div>SYSTEM: Ready</div>
+    <div style="font-size: 16px; letter-spacing: 2px;">MicroMind</div>
     <div id="clock">00:00:00</div>
 </header>
 
-<main class="main-frame">
-    <section class="viewport" id="main-view">
-        <video id="video" autoplay muted playsinline></video>
+<main class="main-grid">
+    <aside>
+        <div class="card">
+            <div class="card-header">BIOMETRIC ASYMMETRY</div>
+            <div id="asym-val" class="stat-val">0.00</div>
+        </div>
+        <div class="card">
+            <div class="card-header">PRIMARY EMOTION</div>
+            <div id="emo-val" class="stat-val" style="color: var(--neon);">WAITING...</div>
+        </div>
+    </aside>
+
+    <section>
+        <div class="viewport-container" id="video-box">
+            <video id="video" autoplay muted playsinline></video>
+        </div>
         <div class="controls">
-            <button class="btn-sci" onclick="switchCamera()">Lens Switch</button>
-            <div style="display:flex; gap:8px;">
-                <button class="btn-sci" onclick="adjustZoom(0.2)">+</button>
-                <button class="btn-sci" onclick="adjustZoom(-0.2)">-</button>
-            </div>
+            <button class="btn" onclick="switchCam()">SWITCH CAMERA</button>
+            <button class="btn" onclick="location.reload()">RELOAD AI</button>
         </div>
     </section>
 
-    <aside class="sidebar">
-        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 15px; font-size: 0.8rem; padding-bottom: 5px;">BIOMETRIC DATA</h3>
-        <div class="indicator-box"><div class="label">Asymmetry Index</div><div id="val-asymmetry" class="value">0.00</div></div>
-        <div class="indicator-box"><div class="label">Neural Tension</div><div id="val-tension" class="value">STABLE</div></div>
-        <div class="indicator-box"><div class="label">Primary Emotion</div><div id="main-emotion" class="value" style="color: #fff;">-</div></div>
-    </aside>
-
-    <aside class="sidebar">
-        <h3 style="border-bottom: 1px solid var(--neon); margin-bottom: 15px; font-size: 0.8rem; padding-bottom: 5px;">AI VERDICT</h3>
-        <div id="verdict-box" style="font-size: 14px; color: #fff; background: rgba(0,255,65,0.05); padding: 15px; border-left: 3px solid var(--neon); line-height: 1.6;">
-            ফেস ডিটেকশনের জন্য অপেক্ষা করা হচ্ছে...
+    <aside>
+        <div class="card" style="min-height: 120px;">
+            <div class="card-header">AI VERDICT</div>
+            <div id="verdict-txt" style="font-size: 14px; line-height: 1.5; color: #fff;">
+                ক্যামেরা ফিড অ্যানালাইজ করা হচ্ছে...
+            </div>
         </div>
     </aside>
 </main>
 
-<footer class="hud-footer">
-    MicroMind <span class="credit">Humayun Shariar Himu</span> All Rights Reserved
-</footer>
-
 <script>
     const video = document.getElementById('video');
+    const loadBar = document.getElementById('load-bar');
+    const statusText = document.getElementById('status-text');
     const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-    let currentStream = null;
+    
     let useFrontCamera = true;
-    let currentZoom = 1.0;
     let canvas = null;
 
-    async function initSystem() {
+    // ১. প্রফেশনাল মডেল লোডার (প্রগ্রেস বার সহ)
+    async function loadAISystems() {
         try {
-            document.getElementById('boot-status').innerText = "Loading Models...";
-            await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-            ]);
-            startCamera();
-        } catch (e) {
-            document.getElementById('boot-status').innerText = "ERROR: Failed to load models";
+            const models = [
+                { name: 'Face Detector', load: faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL) },
+                { name: 'Face Landmarks', load: faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL) },
+                { name: 'Expression Engine', load: faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) }
+            ];
+
+            for(let i=0; i < models.length; i++) {
+                await models[i].load;
+                let percent = Math.round(((i + 1) / models.length) * 100);
+                loadBar.style.width = percent + '%';
+                statusText.innerText = `LOADING ${models[i].name}... ${percent}%`;
+            }
+
+            startVideo();
+        } catch (err) {
+            statusText.innerText = "ERROR: INTERNET CONNECTION FAILED";
+            console.error(err);
         }
     }
 
-    async function startCamera() {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
+    // ২. ভিডিও স্টার্ট (Error Handling সহ)
+    async function startVideo() {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
         }
-        const constraints = { video: { facingMode: useFrontCamera ? "user" : "environment" } };
+
+        const constraints = {
+            video: { 
+                facingMode: useFrontCamera ? "user" : "environment",
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            }
+        };
+
         try {
-            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = currentStream;
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
             video.onloadedmetadata = () => {
-                document.getElementById('boot-screen').style.display = 'none';
-                setupAnalysis();
+                document.getElementById('boot-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                    initAnalysis();
+                }, 800);
             };
         } catch (err) {
-            alert("Camera Access Denied!");
+            alert("ক্যামেরা শুরু করা যাচ্ছে না। দয়া করে নিশ্চিত করুন অন্য কোনো অ্যাপ ক্যামেরা ব্যবহার করছে না।");
         }
     }
 
-    function switchCamera() {
-        useFrontCamera = !useFrontCamera;
-        startCamera();
-    }
-
-    function adjustZoom(val) {
-        currentZoom = Math.max(1, Math.min(3, currentZoom + val));
-        video.style.transform = `scale(${currentZoom})`;
-    }
-
-    async function setupAnalysis() {
+    // ৩. রেসপন্সিভ ক্যানভাস এবং অ্যানালাইসিস
+    async function initAnalysis() {
         if(canvas) canvas.remove();
+        
         canvas = faceapi.createCanvasFromMedia(video);
-        document.getElementById('main-view').append(canvas);
+        document.getElementById('video-box').append(canvas);
+        
         const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
         faceapi.matchDimensions(canvas, displaySize);
 
-        const run = async () => {
-            if (video.paused || video.ended) return;
+        setInterval(async () => {
             const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
                 .withFaceLandmarks()
                 .withFaceExpressions();
-            
-            const resized = faceapi.resizeResults(detections, displaySize);
-            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (resized.length > 0) {
-                faceapi.draw.drawFaceLandmarks(canvas, resized);
-                analyzeData(resized[0]);
+
+            const resizedResults = faceapi.resizeResults(detections, displaySize);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (resizedResults.length > 0) {
+                // কাস্টম বক্স ড্র
+                resizedResults.forEach(det => {
+                    const box = det.detection.box;
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                });
+                updateBiometrics(resizedResults[0]);
             }
-            requestAnimationFrame(run);
-        };
-        run();
+        }, 150); // স্মুথ ফাস্ট আপডেট
     }
 
-    const emotionMap = {
-        neutral: "স্বাভাবিক", happy: "সুখী", sad: "দুঃখিত", 
-        angry: "রাগান্বিত", fearful: "ভীত", disgusted: "বিরক্ত", surprised: "বিস্মিত"
-    };
-
-    function analyzeData(data) {
+    function updateBiometrics(data) {
         const exps = data.expressions;
-        const marks = data.landmarks;
+        const topExp = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
         
-        const leftEye = marks.getLeftEye();
-        const rightEye = marks.getRightEye();
-        const asymmetry = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
-        document.getElementById('val-asymmetry').innerText = asymmetry;
+        // Asymmetry
+        const marks = data.landmarks.getLeftEye();
+        const asym = Math.abs(marks[0].y - marks[3].y).toFixed(2);
+        
+        document.getElementById('asym-val').innerText = asym;
+        document.getElementById('emo-val').innerText = topExp.toUpperCase();
 
-        const topEmotion = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
-        document.getElementById('main-emotion').innerText = topEmotion.toUpperCase();
-        
-        document.getElementById('verdict-box').innerText = `আবেগ: ${emotionMap[topEmotion]}. পরিস্থিতি বিশ্লেষণ করা হচ্ছে...`;
+        const messages = {
+            happy: "আপনার মানসিক অবস্থা ইতিবাচক। ব্রেইন ফাংশন শান্ত আছে।",
+            neutral: "আপনি স্থির অবস্থায় আছেন। কোনো স্ট্রেস নেই।",
+            sad: "আপনাকে কিছুটা বিমর্ষ মনে হচ্ছে। পর্যাপ্ত বিশ্রাম প্রয়োজন।",
+            angry: "টেনশন বা রাগের লক্ষণ পাওয়া গেছে। শান্ত হওয়ার চেষ্টা করুন।"
+        };
+        document.getElementById('verdict-txt').innerText = messages[topExp] || "আবেগ বিশ্লেষণ করা হচ্ছে...";
     }
 
-    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
-    window.onload = initSystem;
-    window.addEventListener('resize', setupAnalysis);
+    function switchCam() {
+        useFrontCamera = !useFrontCamera;
+        startVideo();
+    }
+
+    // টাইম এবং রিসাইজ হ্যান্ডলিং
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-GB'); }, 1000);
+    window.addEventListener('resize', () => initAnalysis());
+    window.onload = loadAISystems;
+
 </script>
 </body>
 </html>
