@@ -13,7 +13,7 @@
             --neon: #00ff41;
             --alert: #ff3e3e;
             --bg: #020502;
-            --panel: rgba(0, 30, 0, 0.7);
+            --glass: rgba(0, 40, 0, 0.6);
             --border: rgba(0, 255, 65, 0.3);
         }
 
@@ -27,215 +27,240 @@
             height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; /* Main body scroll logic handles inside */
         }
 
         /* --- Boot Screen --- */
         #boot-screen {
-            position: fixed; inset: 0; background: #000; z-index: 1000;
+            position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        .loader-box { width: 85%; max-width: 350px; text-align: center; border: 1px solid var(--neon); padding: 30px; position: relative; }
-        .progress-bar { height: 4px; background: #111; margin: 20px 0; overflow: hidden; }
-        #load-fill { width: 0%; height: 100%; background: var(--neon); transition: 0.3s; box-shadow: 0 0 10px var(--neon); }
-
-        /* --- Layout --- */
+        /* --- HUD Header --- */
         .hud-header {
-            padding: 15px; border-bottom: 1px solid var(--border);
+            padding: 10px 15px; border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.9); font-family: 'Orbitron'; font-size: 10px;
+            background: rgba(0,0,0,0.8); font-family: 'Orbitron'; font-size: 10px;
         }
 
+        /* --- Main Layout --- */
         .main-container {
-            flex: 1; display: grid; grid-template-columns: 1fr;
-            padding: 10px; gap: 10px; overflow-y: auto;
-            scrollbar-width: none;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Inner scroll only */
         }
 
-        @media (min-width: 1024px) {
-            .main-container { grid-template-columns: 320px 1fr 320px; align-items: start; }
-        }
-
-        /* --- Video & Canvas --- */
-        .viewport-wrapper {
-            position: relative; width: 100%; aspect-ratio: 4/3;
-            border: 1px solid var(--neon); border-radius: 4px; overflow: hidden;
+        /* Camera Section */
+        .camera-box {
+            position: relative;
+            width: 100%;
             background: #000;
+            padding: 5px;
+            flex-shrink: 0;
         }
-
+        .viewport {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            aspect-ratio: 4/3;
+            margin: 0 auto;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         .mirrored-off { transform: scaleX(1); }
-        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; pointer-events: none; }
+        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
 
-        /* --- UI Elements --- */
-        .data-card {
-            background: var(--panel); border: 1px solid var(--border);
-            padding: 12px; margin-bottom: 10px; backdrop-filter: blur(5px);
+        /* Scrollable Content Area */
+        .scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 40px; /* Extra space for bottom */
         }
 
-        .card-title { font-size: 11px; font-family: 'Orbitron'; opacity: 0.7; margin-bottom: 8px; color: var(--neon); }
-        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .stat-val { font-weight: bold; color: #fff; font-size: 1.1rem; }
-
-        .ai-verdict-box {
-            background: rgba(0, 255, 65, 0.05); border-left: 3px solid var(--neon);
-            padding: 15px; min-height: 80px; font-size: 14px; line-height: 1.5; color: #eee;
+        /* Cards & UI Elements */
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 4px;
+            position: relative;
+        }
+        .card::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 5px; height: 5px; border-top: 2px solid var(--neon); border-left: 2px solid var(--neon);
         }
 
-        .action-bar { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-neon {
-            flex: 1; background: transparent; border: 1px solid var(--neon);
-            color: var(--neon); padding: 12px; font-family: 'Orbitron';
-            font-size: 11px; cursor: pointer; transition: 0.3s;
-        }
-        .btn-neon:hover { background: rgba(0, 255, 65, 0.1); }
-        .btn-neon:active { background: var(--neon); color: #000; }
+        .label { font-family: 'Orbitron'; font-size: 9px; margin-bottom: 5px; opacity: 0.7; letter-spacing: 1px; }
+        .value { font-size: 1.2rem; font-weight: bold; color: #fff; }
 
-        /* --- Scanner Line --- */
-        .scanner-line {
-            position: absolute; width: 100%; height: 2px; background: var(--neon);
-            top: 0; left: 0; box-shadow: 0 0 15px var(--neon);
-            animation: scan 4s linear infinite; z-index: 5; opacity: 0.5;
+        .verdict-text { font-size: 14px; line-height: 1.5; color: #d0ffd0; }
+
+        /* Grid for details */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        .controls { display: flex; gap: 8px; margin-top: 10px; }
+        .btn {
+            flex: 1; background: rgba(0,255,65,0.1); border: 1px solid var(--neon);
+            color: var(--neon); padding: 10px; font-family: 'Orbitron'; font-size: 9px;
+            text-transform: uppercase; cursor: pointer;
+        }
+
+        /* Scanline Animation */
+        .scanline {
+            position: absolute; width: 100%; height: 4px; background: rgba(0, 255, 65, 0.3);
+            top: 0; left: 0; z-index: 5; animation: scan 2s linear infinite;
+            box-shadow: 0 0 15px var(--neon);
         }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
 
+        @media (min-width: 1024px) {
+            .main-container { flex-direction: row; }
+            .camera-box { width: 60%; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); }
+            .scroll-content { width: 40%; }
+        }
     </style>
 </head>
 <body>
 
 <div id="boot-screen">
-    <div class="loader-box">
-        <div style="font-family: 'Orbitron'; font-size: 20px; letter-spacing: 2px;">MicroMind</div>
-        <div id="boot-status" style="font-size: 9px; margin-top: 10px; opacity: 0.6;">INITIALIZING CORE...</div>
-        <div class="progress-bar"><div id="load-fill"></div></div>
+    <h2 style="font-family: 'Orbitron';">MicroMind</h2>
+    <div style="width: 200px; height: 2px; background: #222; margin-top: 10px;">
+        <div id="bar" style="width: 0%; height: 100%; background: var(--neon); transition: 0.3s;"></div>
     </div>
+    <p id="status-txt" style="font-size: 10px; margin-top: 10px;">SYSTEM STARTING...</p>
 </div>
 
 <header class="hud-header">
-    <div id="sys-status">● SYSTEM: Active</div>
-    <div style="font-size: 16px; color: #fff; letter-spacing: 3px;">MicroMind</div>
+    <div>MicroMind</div>
     <div id="clock">00:00:00</div>
 </header>
 
-<main class="main-container">
-    <aside class="left-panel">
-        <div class="data-card">
-            <div class="card-title">FACIAL ASYMMETRY</div>
-            <div class="stat-row"><span>Index:</span> <span id="asym-index" class="stat-val">0.00</span></div>
-            <div style="font-size: 10px; opacity: 0.5;">*Asymmetry suggests cognitive load.</div>
-        </div>
-        <div class="data-card">
-            <div class="card-title">BLINK RATE</div>
-            <div id="blink-status" class="stat-val" style="color: var(--neon);">MONITORING...</div>
-        </div>
-        <div class="data-card">
-            <div class="card-title">PUPIL ANALYSIS</div>
-            <div id="pupil-val" class="stat-val">STABLE</div>
-        </div>
-    </aside>
-
-    <section class="center-panel">
-        <div class="viewport-wrapper" id="vp-container">
-            <div class="scanner-line"></div>
+<div class="main-container">
+    <section class="camera-box">
+        <div class="viewport" id="vp">
+            <div class="scanline"></div>
             <video id="video" autoplay muted playsinline></video>
         </div>
-        <div class="action-bar">
-            <button class="btn-neon" onclick="switchCam()">Switch Camera</button>
-            <button class="btn-neon" onclick="location.reload()">Reset System</button>
+        <div class="controls">
+            <button class="btn" onclick="switchCam()">Switch Source</button>
+            <button class="btn" onclick="location.reload()">Reset Matrix</button>
         </div>
     </section>
 
-    <aside class="right-panel">
-        <div class="data-card">
-            <div class="card-title">DOMINANT EMOTION</div>
-            <div id="main-emotion" style="font-size: 22px; font-weight: bold; color: var(--neon); font-family: 'Orbitron';">...</div>
+    <section class="scroll-content">
+        
+        <div class="card" style="border-left: 4px solid var(--neon);">
+            <div class="label">Primary Analysis Verdict</div>
+            <div id="verdict" class="verdict-text">ক্যামেরার সামনে আসুন, এআই আপনার অভিব্যক্তি বিশ্লেষণ করার জন্য প্রস্তুত!</div>
         </div>
-        <div class="ai-verdict-box" id="ai-verdict">
-            স্ক্যানিং শুরু করুন...
+
+        <div class="stats-grid">
+            <div class="card">
+                <div class="label">Emotion</div>
+                <div id="emotion" class="value">---</div>
+            </div>
+            <div class="card" style="border-color: var(--alert);">
+                <div class="label" style="color: var(--alert);">Deception</div>
+                <div id="deception" class="value" style="color: var(--alert);">0%</div>
+            </div>
         </div>
-        <div class="data-card" style="margin-top: 10px; border-color: var(--alert);">
-            <div class="card-title" style="color: var(--alert);">DECEPTION PROBABILITY</div>
-            <div id="lie-meter" style="font-size: 24px; font-weight: bold; color: var(--alert); font-family: 'Orbitron';">0%</div>
+
+        <div class="card">
+            <div class="label">Facial Data Metrics</div>
+            <div style="font-size: 11px;">
+                <p>Asymmetry Index: <span id="asym" style="color: #fff;">0.00</span></p>
+                <div style="height: 5px; width: 100%; background: #111; margin-top: 5px;">
+                    <div id="asym-bar" style="height: 100%; width: 0%; background: var(--neon);"></div>
+                </div>
+            </div>
         </div>
-    </aside>
-</main>
+
+        <div class="card">
+            <div class="label">Blink & Micro-Expressions</div>
+            <div id="blink" class="value" style="font-size: 14px;">MONITORING...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">AI Confidence Score</div>
+            <div id="confidence" class="value">98.2%</div>
+        </div>
+
+        <div style="text-align: center; opacity: 0.3; font-size: 10px; padding: 20px;">
+            MicroMind<br>
+            Humayun Shariar Himu
+        </div>
+    </section>
+</div>
 
 <script>
     const video = document.getElementById('video');
-    const loadFill = document.getElementById('load-fill');
-    const statusText = document.getElementById('boot-status');
     const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
     
-    let useFrontCamera = true;
+    let useFront = true;
     let canvas = null;
-    let currentStream = null;
 
     async function init() {
+        const bar = document.getElementById('bar');
+        const txt = document.getElementById('status-txt');
+        
         try {
-            statusText.innerText = "LOADING NEURAL NETWORKS (30%)...";
+            txt.innerText = "LOADING NEURAL NETS...";
             await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-            loadFill.style.width = "30%";
-            
-            statusText.innerText = "MAPPING LANDMARKS (60%)...";
+            bar.style.width = "30%";
             await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-            loadFill.style.width = "60%";
-            
-            statusText.innerText = "CALIBRATING EMOTIONS (100%)...";
+            bar.style.width = "60%";
             await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-            loadFill.style.width = "100%";
+            bar.style.width = "100%";
             
-            setTimeout(startCamera, 500);
+            txt.innerText = "ACCESSING OPTICS...";
+            startCamera();
         } catch (e) {
-            statusText.innerText = "HARDWARE ERROR: AI FAILED TO LOAD";
-            console.error(e);
+            txt.innerText = "CRITICAL ERROR!";
         }
     }
 
     async function startCamera() {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-        }
-
+        if (window.stream) window.stream.getTracks().forEach(t => t.stop());
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: useFrontCamera ? "user" : "environment",
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
+                video: { facingMode: useFront ? "user" : "environment" }
             });
-            
-            currentStream = stream;
+            window.stream = stream;
             video.srcObject = stream;
+            video.classList.toggle('mirrored-off', !useFront);
             
-            // Mirror flip for front camera
-            video.classList.toggle('mirrored-off', !useFrontCamera);
-
             video.onloadedmetadata = () => {
-                document.getElementById('boot-screen').style.opacity = '0';
-                setTimeout(() => document.getElementById('boot-screen').style.display = 'none', 500);
-                startAnalysis();
+                document.getElementById('boot-screen').style.display = 'none';
+                analyze();
             };
         } catch (err) {
-            alert("Camera Access Denied!");
+            alert("Camera Error: " + err.message);
         }
     }
 
-    async function startAnalysis() {
-        // Create canvas once to avoid memory leaks
-        if(!canvas) {
+    async function analyze() {
+        if (!canvas) {
             canvas = faceapi.createCanvasFromMedia(video);
-            document.getElementById('vp-container').append(canvas);
+            document.getElementById('vp').append(canvas);
         }
-        
+
         const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
         faceapi.matchDimensions(canvas, displaySize);
 
         setInterval(async () => {
-            if (video.paused || video.ended) return;
-
-            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
                 .withFaceLandmarks()
                 .withFaceExpressions();
 
@@ -244,76 +269,51 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (resized.length > 0) {
-                const face = resized[0];
-                drawHUD(ctx, face);
-                analyzePsychology(face);
+                // Draw skeleton
+                faceapi.draw.drawFaceLandmarks(canvas, resized);
+                
+                const data = resized[0];
+                const expressions = data.expressions;
+                const topExp = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+                
+                // Process Logic
+                const landmarks = data.landmarks;
+                const leftEye = landmarks.getLeftEye();
+                const rightEye = landmarks.getRightEye();
+                const diff = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
+
+                updateUI(topExp, diff);
             }
-        }, 150);
+        }, 200);
     }
 
-    function drawHUD(ctx, face) {
-        const { box } = face.detection;
-        ctx.strokeStyle = '#00ff41';
-        ctx.lineWidth = 2;
+    function updateUI(emotion, asym) {
+        document.getElementById('emotion').innerText = emotion.toUpperCase();
+        document.getElementById('asym').innerText = asym;
         
-        // Custom UI Corners
-        const len = 20;
-        ctx.beginPath();
-        // Top Left
-        ctx.moveTo(box.x, box.y + len); ctx.lineTo(box.x, box.y); ctx.lineTo(box.x + len, box.y);
-        // Top Right
-        ctx.moveTo(box.right - len, box.y); ctx.lineTo(box.right, box.y); ctx.lineTo(box.right, box.y + len);
-        // Bottom Left
-        ctx.moveTo(box.x, box.bottom - len); ctx.lineTo(box.x, box.bottom); ctx.lineTo(box.x + len, box.bottom);
-        // Bottom Right
-        ctx.moveTo(box.right - len, box.bottom); ctx.lineTo(box.right, box.bottom); ctx.lineTo(box.right, box.bottom - len);
-        ctx.stroke();
+        let meter = Math.min(asym * 10, 100);
+        document.getElementById('asym-bar').style.width = meter + "%";
 
-        // Landmarks
-        faceapi.draw.drawFaceLandmarks(canvas, face);
-    }
+        let verdict = "আপনার অভিব্যক্তি বিশ্লেষণ করা হচ্ছে।";
+        let prob = "5%";
 
-    function analyzePsychology(data) {
-        const exps = data.expressions;
-        const topExp = Object.keys(exps).reduce((a, b) => exps[a] > exps[b] ? a : b);
-        const landmarks = data.landmarks;
-
-        // 1. Asymmetry Index
-        const leftEye = landmarks.getLeftEye();
-        const rightEye = landmarks.getRightEye();
-        const asym = Math.abs(leftEye[0].y - rightEye[0].y).toFixed(2);
-        document.getElementById('asym-index').innerText = asym;
-
-        // 2. Emotion Text Update
-        document.getElementById('main-emotion').innerText = topExp.toUpperCase();
-
-        // 3. Verdict Logic (Original)
-        let verdict = "";
-        let lieProb = 0;
-
-        if (topExp === 'happy' && exps.happy > 0.8) {
-            verdict = "আপনার হাসি স্বাভাবিক এবং ইতিবাচক (Duchenne Smile এর সম্ভাবনা বেশি)।";
-            lieProb = 5;
-        } else if (topExp === 'neutral' && asym > 5) {
-            verdict = "আপনার মুখে এক ধরণের 'কগনিটিভ ডিসোনেন্স' বা মানসিক দ্বন্দ্বের ছাপ লক্ষ্য করা যাচ্ছে।";
-            lieProb = 45;
-        } else if (topExp === 'sad' || topExp === 'fearful') {
-            verdict = "আপনি সম্ভবত নেতিবাচক আবেগ দমন করার চেষ্টা করছেন।";
-            lieProb = 30;
-        } else if (asym > 8) {
-            verdict = "মুখের দুই অংশের অমিল পাওয়া গেছে। এটি কোনো সত্য আবেগ লুকানোর 'মাইক্রো-এক্সপ্রেশন' হতে পারে।";
-            lieProb = 75;
-        } else {
-            verdict = "সিস্টেম তথ্য বিশ্লেষণ করছে... আপনার বর্তমান শারীরিক অবস্থা স্থিতিশীল।";
-            lieProb = 10;
+        if(emotion === 'neutral' && asym > 3) {
+            verdict = "আপনার শান্ত চেহারার আড়ালে লুকানো কোনো মানসিক চাপ বা অস্বস্তি অনুভব করা যাচ্ছে।";
+            prob = "42%";
+        } else if(asym > 6) {
+            verdict = "সতর্কতা! উচ্চ মাত্রার অসামঞ্জস্যতা লক্ষ্য করা গেছে, যা সত্য গোপনের লক্ষণ হতে পারে।";
+            prob = "78%";
+        } else if(emotion === 'happy') {
+            verdict = "আপনার মধ্যে ইতিবাচক শক্তি দেখা যাচ্ছে। আপনি আত্মবিশ্বাসী মনে হচ্ছেন।";
+            prob = "12%";
         }
 
-        document.getElementById('ai-verdict').innerText = verdict;
-        document.getElementById('lie-meter').innerText = lieProb + "%";
+        document.getElementById('verdict').innerText = verdict;
+        document.getElementById('deception').innerText = prob;
     }
 
     function switchCam() {
-        useFrontCamera = !useFrontCamera;
+        useFront = !useFront;
         startCamera();
     }
 
